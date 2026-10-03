@@ -20,8 +20,8 @@ export default function UserImport({ onClose, onImported }: { onClose: () => voi
     } finally { setBusy(false); }
   }
   return <Modal wide title="Excel’den Toplu Kullanıcı Oluştur" onClose={() => { if (!busy) onClose(); }}>
-    <p>Önce şablonu indirip <strong>Kullanıcılar</strong> sayfasını doldurun. Ad, soyad, e-posta ve birim zorunludur. Ünvan ve telefon isteğe bağlıdır.</p>
-    <p>Birim adını şablondaki <strong>Birimler</strong> sayfasından alın. Telefonu başındaki sıfırı koruyarak metin olarak yazın. Talep Açabilir: <strong>Evet / Hayır</strong>; boş bırakılırsa Hayır.</p>
+    <p>Önce Sistem Tanımları ekranında birim ve ünvanları tanımlayın; şablonu indirip <strong>Kullanıcılar</strong> sayfasını doldurun. Ad, soyad, e-posta, birim ve ünvan zorunludur. Telefon isteğe bağlıdır.</p>
+    <p>Birim adını <strong>Birimler</strong>, ünvan adını <strong>Ünvanlar</strong> sayfasından alın. Telefonu başındaki sıfırı koruyarak metin olarak yazın. Talep Açabilir: <strong>Evet / Hayır</strong>; boş bırakılırsa Hayır.</p>
     <a className="button" href="/api/v1/admin/users/import-template">Excel Şablonunu İndir</a>
     <p className="notice">En fazla 100 kullanıcı / 2 MB. Yalnızca .xlsx kabul edilir. Tüm hesaplar Standart Kullanıcı ve aktif olarak oluşturulur. Mevcut hesaplar güncellenmez. Hatalı satır varsa hiçbir kullanıcı kaydedilmez.</p>
     {!result?.committed && <>

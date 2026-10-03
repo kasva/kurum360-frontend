@@ -6,14 +6,15 @@ export const adminRoles = [
 ] as const;
 export type AdminRole = typeof adminRoles[number]['value'];
 export interface AdminDepartment { id: string; name: string; isActive: boolean }
+export interface AdminTitle { id: string; name: string; isActive: boolean }
 export interface AdminUser {
   id: string; email: string; name: string; departmentId: string; department: string;
-  firstName: string; lastName: string; title: string; phoneNumber?: string; userType: 'Standard' | 'Admin';
+  firstName: string; lastName: string; title: string; titleId?: string; phoneNumber?: string; userType: 'Standard' | 'Admin';
   roleCode?: string; roleName?: string; permissions?: string[]; role: AdminRole; canCreateRequests: boolean; isActive: boolean; mustChangePassword: boolean;
 }
 export interface UserInput {
   email: string; name: string; departmentId: string; role: AdminRole; roleCode?: string;
-  firstName: string; lastName: string; title: string; phoneNumber: string; userType: 'Standard' | 'Admin';
+  firstName: string; lastName: string; title: string; titleId: string; phoneNumber: string; userType: 'Standard' | 'Admin';
   canCreateRequests: boolean; isActive: boolean; temporaryPassword?: string;
 }
 export interface ImportUserRow {
@@ -24,6 +25,7 @@ export interface ImportUsersResult { committed: boolean; total: number; created:
 export const adminService = {
   users: (signal?: AbortSignal) => api<AdminUser[]>('/admin/users', 'GET', undefined, signal),
   departments: (signal?: AbortSignal) => api<AdminDepartment[]>('/admin/departments', 'GET', undefined, signal),
+  titles: (signal?: AbortSignal) => api<AdminTitle[]>('/admin/titles', 'GET', undefined, signal),
   createUser: (input: UserInput) => api<AdminUser>('/admin/users', 'POST', input),
   updateUser: (id: string, input: UserInput) => api<AdminUser>(`/admin/users/${encodeURIComponent(id)}`, 'PUT', input),
   resetPassword: (id: string, temporaryPassword: string) => api<void>(`/admin/users/${encodeURIComponent(id)}/reset-password`, 'POST', { temporaryPassword }),

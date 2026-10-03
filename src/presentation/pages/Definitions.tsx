@@ -8,8 +8,8 @@ import { RequestValidationError } from '../../application/requests/errors';
 import { errorMessage } from '../errors';
 import { Empty, Field, Icon, Modal, PageTitle, Select } from '../components/ui';
 
-const titles = { types: 'Talep Türleri', categories: 'Kategoriler', departments: 'Birimler' };
-const singular = { types: 'Talep Türü', categories: 'Kategori', departments: 'Birim' };
+const titles = { types: 'Talep Türleri', categories: 'Kategoriler', departments: 'Birimler', titles: 'Ünvanlar' };
+const singular = { types: 'Talep Türü', categories: 'Kategori', departments: 'Birim', titles: 'Ünvan' };
 function message(error: unknown) {
   return error instanceof RequestValidationError ? Object.values(error.errors).filter(Boolean).join(' ') : errorMessage(error);
 }
@@ -29,7 +29,7 @@ function DefinitionEditor({ kind, item, onClose, onSave }: {
     {kind === 'types' && <><Field label="Açıklama"><textarea rows={3} maxLength={500} value={description} onChange={e => setDescription(e.target.value)}/></Field>
       <Field label="Form Yapısı" required><Select options={formTemplates} placeholder={null} disabled={!!item} value={baseType} onChange={e => setBaseType(e.target.value)}/><small>Türün hangi ek alanları ve yetki kurallarını kullanacağını belirler. Kayıttan sonra değiştirilemez.</small></Field></>}
     <label className="admin-checkbox"><input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)}/>Aktif</label>
-    <p className="notice">{kind === 'departments' ? 'Aktif kullanıcıları olan birim pasifleştirilemez.' : 'Pasif tanımlar yeni taleplerde seçilemez. Önceki talepler ve geçmişleri korunur.'}</p>
+    <p className="notice">{kind === 'departments' || kind === 'titles' ? `Aktif kullanıcıları olan ${kind === 'titles' ? 'ünvan' : 'birim'} pasifleştirilemez. Önce kullanıcıları başka bir tanıma taşıyın.` : 'Pasif tanımlar yeni taleplerde seçilemez. Önceki talepler ve geçmişleri korunur.'}</p>
     {error && <div className="error-banner" role="alert">{error}</div>}
     <div className="modal-footer"><button type="button" disabled={busy} onClick={onClose}>Vazgeç</button><button className="primary" disabled={busy}>{busy ? 'Kaydediliyor…' : 'Kaydet'}</button></div>
   </form></Modal>;
@@ -49,7 +49,7 @@ export default function Definitions({ kind, user, refreshSession }: { kind: Defi
   }, [kind, reload]);
   const filtered = items.filter(i => i.name.toLocaleLowerCase('tr-TR').includes(search.trim().toLocaleLowerCase('tr-TR')));
   return <>
-    <PageTitle title={titles[kind]} description="Talep formunda kullanılacak tanımları görüntüleyin ve yetkiniz varsa düzenleyin.">{canEdit && <button className="primary" disabled={loading} onClick={() => setEditor({})}><Icon name="plus" size={17}/>Yeni {singular[kind]}</button>}</PageTitle>
+    <PageTitle title={titles[kind]} description={kind === 'titles' || kind === 'departments' ? 'Kullanıcı ve Excel yüklemesinde seçilecek tanımları yönetin.' : 'Talep formunda kullanılacak tanımları yönetin.'}>{canEdit && <button className="primary" disabled={loading} onClick={() => setEditor({})}><Icon name="plus" size={17}/>Yeni {singular[kind]}</button>}</PageTitle>
     <nav className="admin-tabs" aria-label="Tanım ekranları">{(Object.keys(titles) as DefinitionKind[]).filter(k => hasPermission(user, 'definitions.' + k + '.view')).map(k => <a key={k} className={`button ${kind === k ? 'primary' : ''}`} href={`#/definitions/${k}`} aria-current={kind === k ? 'page' : undefined}>{titles[k]}</a>)}<button onClick={() => { setError(''); setLoading(true); setReload(v => v + 1); }}>Yenile</button></nav>
     {success && <div className="success-banner" role="status">{success}</div>}{error && <div className="error-banner" role="alert">{error}</div>}
     <section className="card"><div className="padded"><Field label="Tanım Ara"><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Adına göre ara…"/></Field></div>
@@ -58,7 +58,7 @@ export default function Definitions({ kind, user, refreshSession }: { kind: Defi
       </tr>)}</tbody></table></div> : <Empty title="Tanım bulunamadı" description="Aramayı değiştirin veya yeni bir tanım ekleyin."/>}
     </section>
     {editor && <DefinitionEditor kind={kind} item={editor.item} onClose={() => setEditor(null)} onSave={async input => {
-      await definitionService.save(kind, input, editor.item); setSuccess('Tanım kaydedildi. Talep formundaki seçenekler güncellendi.'); setError(''); setReload(v => v + 1); await refreshSession();
+      await definitionService.save(kind, input, editor.item); setSuccess('Tanım kaydedildi. İlgili formu yeniden açtığınızda güncel seçenekler gösterilir.'); setError(''); setReload(v => v + 1); await refreshSession();
     }}/>} 
   </>;
 }

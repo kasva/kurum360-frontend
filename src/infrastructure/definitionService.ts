@@ -1,6 +1,6 @@
 import { api } from './httpRequestService';
 
-export type DefinitionKind = 'types' | 'categories' | 'departments';
+export type DefinitionKind = 'types' | 'categories' | 'departments' | 'titles';
 export interface DefinitionItem {
   code?: string; id?: string; name: string; isActive: boolean; description?: string; baseType?: string;
 }
