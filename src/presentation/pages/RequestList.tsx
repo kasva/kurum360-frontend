@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { categories, priorities, statuses, typeDefinitions } from '../../domain/requests/model';
-import { departments, people } from '../../domain/identity/organization';
+import { titles, people } from '../../domain/identity/organization';
 import RequestTable from '../components/RequestTable';
 import { Field, Icon, PageTitle, Select } from '../components/ui';
 import type { User } from '../../domain/identity/organization';
@@ -32,10 +32,10 @@ export default function RequestList({ service, user, query }: { service: LiveReq
   }, [filters, page, pageSize, service, invalidDates, reload]);
   useEffect(() => { const c = new AbortController(); service.dashboard(scope, c.signal).then(setSummary).catch(e => { if (!c.signal.aborted) setError(errorMessage(e)); }); return () => c.abort(); }, [scope, service]);
   const change = (key: keyof RequestFilters, value: string) => { setFilters(f => ({ ...f, [key]: value })); setPage(1); };
-  const fields: [keyof RequestFilters, string, readonly SelectOption[]][] = [['type', 'Talep Türü', typeDefinitions.map(t => t.name)], ['category', 'Kategori', categories], ['status', 'Durum', statuses], ['priority', 'Öncelik', priorities], ['department', 'Birim', departments], ['assignee', 'Sorumlu', people.map(p => ({ value: p.id, label: p.name }))], ['requester', 'Talep Eden', people.map(p => ({ value: p.id, label: p.name }))]];
+  const fields: [keyof RequestFilters, string, readonly SelectOption[]][] = [['type', 'Talep Türü', typeDefinitions.map(t => t.name)], ['category', 'Kategori', categories], ['status', 'Durum', statuses], ['priority', 'Öncelik', priorities], ['targetTitle', 'Ünvan', titles], ['assignee', 'Sorumlu', people.map(p => ({ value: p.id, label: p.name }))], ['requester', 'Talep Eden', people.map(p => ({ value: p.id, label: p.name }))]];
   const pages = Math.max(1, Math.ceil((result?.totalCount || 0) / pageSize));
-  const title = scope === 'assigned' ? 'Bana Atananlar' : scope === 'created' ? 'Oluşturduklarım' : scope === 'queue' ? 'Birim Kuyruğu' : 'Tüm Talepler';
-  return <><PageTitle title={title} description={scope === 'queue' ? 'Biriminize yönlendirilmiş, üzerinize alabileceğiniz talepler.' : 'Erişim yetkiniz olan talepleri takip edin.'}>{user.canCreateRequests && <a className="button primary" href="#/new"><Icon name="plus"/>Yeni Talep Oluştur</a>}</PageTitle>
+  const title = scope === 'assigned' ? 'Bana Atananlar' : scope === 'created' ? 'Oluşturduklarım' : scope === 'queue' ? 'Ünvan Kuyruğu' : 'Tüm Talepler';
+  return <><PageTitle title={title} description={scope === 'queue' ? 'Ünvanınıza yönlendirilmiş, üzerinize alabileceğiniz talepler.' : 'Erişim yetkiniz olan talepleri takip edin.'}>{user.canCreateRequests && <a className="button primary" href="#/new"><Icon name="plus"/>Yeni Talep Oluştur</a>}</PageTitle>
     <section className="card filter-card"><div className="filter-heading"><h2>Filtreler</h2><button className="text-link" onClick={() => { setFilters({ view: scope }); setPage(1); }}>Filtreleri temizle</button></div><div className="filter-grid">
     <Field label="Arama"><input value={filters.search || ''} onChange={e => change('search', e.target.value)} placeholder="Talep no, konu, açıklama…"/></Field>
     {fields.map(([key, label, options]) => <Field key={key} label={label}><Select options={options} value={filters[key] || ''} onChange={e => change(key, e.target.value)}/></Field>)}

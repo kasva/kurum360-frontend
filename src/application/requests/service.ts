@@ -1,4 +1,4 @@
-import { canAssign, departments, people, personName } from '../../domain/identity/organization';
+import { canAssign, titles, people, personName } from '../../domain/identity/organization';
 import { categories, delayDays, isOpen, isOption, isOverdue, localDate, priorities, privacyLevels, statuses, typeDefinitions, validateDraft } from '../../domain/requests/model';
 import type { User } from '../../domain/identity/organization';
 import type { RequestRecord, RequestStatus, TimelineEvent } from '../../domain/requests/types';
@@ -10,7 +10,7 @@ export function selectRequests(records: readonly RequestRecord[], filters: Reque
   const query = (filters.search || '').trim().toLocaleLowerCase('tr');
   const selected = records.filter(r => {
     if (query && !`${r.number} ${r.subject} ${r.description}`.toLocaleLowerCase('tr').includes(query)) return false;
-    for (const field of ['type', 'category', 'status', 'priority', 'department', 'assignee', 'requester'] as const) {
+    for (const field of ['type', 'category', 'status', 'priority', 'targetTitle', 'assignee', 'requester'] as const) {
       if (filters[field] && r[field] !== filters[field]) return false;
     }
     if (filters.from && localDate(new Date(r.createdAt)) < filters.from) return false;
@@ -49,7 +49,7 @@ export function createRequestService(repository: RequestRepository, user: User, 
     list: () => repository.list(),
     async create(draft) {
       const errors = validateDraft(draft, clock());
-      if (!departments.includes(draft.department)) errors.department = 'Geçerli bir birim seçin.';
+      if (!titles.includes(draft.targetTitle)) errors.targetTitle = 'Geçerli bir ünvan seçin.';
       if (draft.assignee && (!canAssign(user) || !people.some(p => p.id === draft.assignee))) errors.assignee = 'Sorumlu seçimi geçersiz.';
       const definition = typeDefinitions.find(t => t.name === draft.type);
       const { category, priority, privacy } = draft;
@@ -77,12 +77,12 @@ export function createRequestService(repository: RequestRepository, user: User, 
         record.assignee = value;
         if (['Yeni', 'Değerlendiriliyor'].includes(record.status)) record.status = 'Atandı';
         message = `Sorumlu: ${personName(value)}.`;
-      } else if (action === 'department') {
-        if (!departments.includes(value)) throw new Error('Geçerli bir birim seçin.');
-        record.department = value;
+      } else if (action === 'title') {
+        if (!titles.includes(value)) throw new Error('Geçerli bir ünvan seçin.');
+        record.targetTitle = value;
         record.assignee = '';
         if (record.status === 'Atandı') record.status = 'Değerlendiriliyor';
-        message = `${value} birimine yönlendirildi. Önceki sorumlu kaldırıldı.`;
+        message = `${value} ünvanına yönlendirildi. Önceki sorumlu kaldırıldı.`;
       } else if (action === 'priority') {
         if (!isOption(priorities, value)) throw new Error('Geçerli bir öncelik seçin.');
         message = `Öncelik: ${record.priority} → ${value}.`;
@@ -99,7 +99,7 @@ export function createRequestService(repository: RequestRepository, user: User, 
         record.closedAt = next === 'Kapatıldı' ? clock().toISOString() : null;
         message = action === 'revise' ? `Revizyon istendi. ${before} → ${next}.` : `Durum: ${before} → ${next}.`;
       }
-      if (before !== record.status && ['assign', 'department'].includes(action)) message += ` Durum: ${before} → ${record.status}.`;
+      if (before !== record.status && ['assign', 'title'].includes(action)) message += ` Durum: ${before} → ${record.status}.`;
       record.timeline.push(event(`${message}${note.trim() ? ` Not: ${note.trim()}` : ''}`));
       await repository.save(record);
     },

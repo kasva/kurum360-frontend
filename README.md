@@ -2,7 +2,7 @@
 
 React + TypeScript arayüzü, C# REST API ve PostgreSQL ile talep ve iş takibi.
 
-Talep oluşturma yetkisi kullanıcıya ayrı verilir. Çalışanlar birim kuyruğundan talepleri üzerine alır ve işler; izleyiciler salt okunur erişir. Gizlilik ve işlem izinleri API’de doğrulanır.
+Talep oluşturma yetkisi kullanıcıya ayrı verilir. Standart kullanıcılar ünvan kuyruğundan talepleri üzerine alır ve atanan işleri yürütür; Admin tüm işlemleri yönetir. Gizlilik ve işlem izinleri API’de doğrulanır.
 
 ## Docker ile çalıştırma
 
@@ -64,3 +64,5 @@ PostgreSQL entegrasyon testleri geçici veritabanları oluşturur; test kullanı
 API sözleşmesi, rol kuralları ve dağıtım ayrıntıları: [backend/README.md](backend/README.md).
 
 Eski bellek repository ve demo testleri yalnızca prototip regresyonu için korunur; uygulamanın ana giriş noktası gerçek API kullanır. Demo kayıtlar üretime yüklenmez.
+
+Ünvan iş akışı güncellemesi: Birim alanı, tanım ekranı ve yönlendirmesi kaldırıldı. Talepler hedef ünvana gönderilir; aynı ünvandaki kişilerden sorumlu seçilir. Backend 20261004100000_TitleRouting migration ile birlikte güncellenmelidir. Excel için yeni altı sütunlu şablon indirilmelidir. Kullanıcı formu dışarı tıklamayla veya Escape ile kapanmaz; sağ üstteki Kapat düğmesini kullanın.

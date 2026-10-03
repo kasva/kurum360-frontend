@@ -31,10 +31,10 @@ export function delayDays(r: RequestTiming, now = new Date()) {
   return Math.max(0, Math.round((Date.parse(localDate(new Date(end)) + 'T00:00:00Z') - Date.parse(r.dueDate + 'T00:00:00Z')) / 86400000));
 }
 export const isOverdue = (r: RequestTiming, now = new Date()) => isOpen(r) && delayDays(r, now) > 0;
-export const emptyDraft = (): RequestDraft => ({ type: typeDefinitions.find(t => t.isActive !== false)?.name ?? '', category: '', subject: '', description: '', priority: 'Normal', department: '', relatedPerson: '', assignee: '', dueDate: '', privacy: 'Normal', tags: '', dynamic: {}, attachments: [] });
+export const emptyDraft = (): RequestDraft => ({ type: typeDefinitions.find(t => t.isActive !== false)?.name ?? '', category: '', subject: '', description: '', priority: 'Normal', targetTitle: '', relatedPerson: '', assignee: '', dueDate: '', privacy: 'Normal', tags: '', dynamic: {}, attachments: [] });
 export function validateDraft(draft: RequestDraft, now = new Date()) {
   const errors: ValidationErrors = {};
-  for (const [key, label] of Object.entries({ type: 'Talep türü', category: 'Kategori', subject: 'Konu', description: 'Açıklama', department: 'İlgili birim', dueDate: 'Son tarih' }) as [keyof RequestDraft, string][]) {
+  for (const [key, label] of Object.entries({ type: 'Talep türü', category: 'Kategori', subject: 'Konu', description: 'Açıklama', targetTitle: 'İlgili ünvan', dueDate: 'Son tarih' }) as [keyof RequestDraft, string][]) {
     if (!String(draft[key] || '').trim()) errors[key] = `${label} zorunludur.`;
   }
   if (draft.subject.trim().length > 160) errors.subject = 'Konu en fazla 160 karakter olabilir.';

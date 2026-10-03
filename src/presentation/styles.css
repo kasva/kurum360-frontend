@@ -23,3 +23,6 @@
 .import-error { color: #b42318; min-width: 180px; white-space: normal; }
 dialog.modal-wide { width: min(1050px, calc(100% - 32px)); }
 dialog.modal-wide .modal-footer { flex-wrap: wrap; }
+dialog.modal-screen { position: fixed; inset: 0; margin: 0; width: 100%; height: 100dvh; max-width: none; max-height: none; padding: 72px 16px 24px; border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: auto; }
+dialog.modal-screen .modal-body { width: min(540px, 100%); margin: 0 auto; background: #fff; border: 1px solid #e0e6f1; border-radius: 12px; box-shadow: 0 24px 100px #10274330; }
+.modal-screen-close { position: fixed; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); display: flex; align-items: center; gap: 8px; z-index: 1; background: #fff; color: #263d5b; box-shadow: 0 4px 20px #10274330; }

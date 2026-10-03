@@ -4,7 +4,7 @@ import type { User } from '../../domain/identity/organization';
 import { hasPermission } from '../../domain/identity/organization';
 import UserImport from './UserImport';
 import { adminService } from '../../infrastructure/adminService';
-import type { AdminDepartment, AdminTitle, AdminUser, UserInput } from '../../infrastructure/adminService';
+import type { AdminTitle, AdminUser, UserInput } from '../../infrastructure/adminService';
 import { RequestValidationError } from '../../application/requests/errors';
 import { errorMessage } from '../errors';
 import { Empty, Field, Icon, Modal, PageTitle, Select } from '../components/ui';
@@ -16,13 +16,13 @@ function validationMessage(error: unknown) {
 }
 type Editor = { kind: 'user'; user?: AdminUser } | { kind: 'password'; user: AdminUser } | { kind: 'import' };
 
-function UserEditor({ user, currentUserId, departments, titles, onClose, onSave }: {
-  user?: AdminUser; currentUserId: string; departments: AdminDepartment[]; titles: AdminTitle[];
+function UserEditor({ user, currentUserId, titles, onClose, onSave }: {
+  user?: AdminUser; currentUserId: string; titles: AdminTitle[];
   onClose: () => void; onSave: (input: UserInput) => Promise<void>;
 }) {
   const [input, setInput] = useState<UserInput>({ email: user?.email ?? '', name: user?.name ?? '',
     firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', title: user?.title ?? '', titleId: user?.titleId ?? '', phoneNumber: user?.phoneNumber ?? '', userType: user?.userType ?? 'Standard',
-    departmentId: user?.departmentId ?? '', role: user?.role ?? 'Employee',
+    role: user?.role ?? 'Employee',
     canCreateRequests: user?.canCreateRequests ?? false, isActive: user?.isActive ?? true, temporaryPassword: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -44,7 +44,6 @@ function UserEditor({ user, currentUserId, departments, titles, onClose, onSave 
     <Field label="Ünvan" required><Select required placeholder="Ünvan seçiniz" options={titles.filter(t => t.isActive || t.id === input.titleId).map(t => ({ value: t.id, label: t.name + (t.isActive ? '' : ' (Pasif)') }))} value={input.titleId} onChange={e => setInput({ ...input, titleId: e.target.value, title: titles.find(t => t.id === e.target.value)?.name ?? '' })}/><small>Ünvanları Sistem Tanımları → Ünvanlar ekranından tanımlayın.</small></Field>
     <Field label="Telefon"><input type="tel" autoComplete="tel" maxLength={30} value={input.phoneNumber} placeholder="05xx xxx xx xx" onChange={e => setInput({ ...input, phoneNumber: e.target.value })}/></Field>
     <Field label="E-posta" required><input type="email" required maxLength={254} value={input.email} onChange={e => setInput({ ...input, email: e.target.value })}/></Field>
-    <Field label="Birim" required><Select required placeholder="Birim seçiniz" options={departments.filter(d => d.isActive || d.id === input.departmentId).map(d => ({ value: d.id, label: d.name + (d.isActive ? '' : ' (Pasif)') }))} value={input.departmentId} onChange={e => setInput({ ...input, departmentId: e.target.value })}/></Field>
     <Field label="Kullanıcı Tipi" required><Select placeholder={null} options={[{ value: 'Standard', label: 'Standart Kullanıcı' }, { value: 'Admin', label: 'Admin' }]} disabled={self} value={input.userType} onChange={e => setInput({ ...input, userType: e.target.value as UserInput['userType'] })}/></Field>
     <label className="admin-checkbox"><input type="checkbox" checked={input.userType === 'Admin' || input.canCreateRequests} disabled={input.userType === 'Admin'} onChange={e => setInput({ ...input, canCreateRequests: e.target.checked })}/>Talep açabilir</label>
     <p className="muted">Standart kullanıcı atanan işleri yürütür; yalnızca bu izin verilirse talep açar. Admin tüm işlemlere yetkilidir.</p>
@@ -68,33 +67,33 @@ function PasswordEditor({ user, onClose, onSave }: { user: AdminUser; onClose: (
   </form></Modal>;
 }
 export default function Admin({ currentUser, refreshSession }: { currentUser: User; refreshSession: () => Promise<void> }) {
-  const [users, setUsers] = useState<AdminUser[]>([]); const [departments, setDepartments] = useState<AdminDepartment[]>([]); const [titles, setTitles] = useState<AdminTitle[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]); const [titles, setTitles] = useState<AdminTitle[]>([]);
   const [search, setSearch] = useState(''); const [editor, setEditor] = useState<Editor | null>(null);
   const [error, setError] = useState(''); const [message, setMessage] = useState(''); const [loading, setLoading] = useState(true); const [reload, setReload] = useState(0);
   const manage = hasPermission(currentUser, 'users.manage');
   useEffect(() => {
     const controller = new AbortController();
-    Promise.all([adminService.users(controller.signal), adminService.departments(controller.signal), adminService.titles(controller.signal)])
-      .then(([users, departments, titles]) => { setUsers(users); setDepartments(departments); setTitles(titles); })
+    Promise.all([adminService.users(controller.signal), adminService.titles(controller.signal)])
+      .then(([users, titles]) => { setUsers(users); setTitles(titles); })
       .catch(e => { if (!controller.signal.aborted) setError(validationMessage(e)); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [reload, manage, currentUser]);
   async function saved(text: string) { setMessage(text); setError(''); setReload(v => v + 1); await refreshSession(); }
   const query = search.trim().toLocaleLowerCase('tr-TR');
-  const filtered = users.filter(u => `${u.name} ${u.email} ${u.department} ${u.title} ${u.phoneNumber ?? ''}`.toLocaleLowerCase('tr-TR').includes(query));
+  const filtered = users.filter(u => `${u.name} ${u.email} ${u.title} ${u.phoneNumber ?? ''}`.toLocaleLowerCase('tr-TR').includes(query));
   const editable = (u: AdminUser) => currentUser.roleCode === 'SystemAdmin' || u.userType === 'Standard';
   return <>
     <PageTitle title="Kullanıcı Yönetimi" description="Personel bilgilerini, kullanıcı tipini ve talep açma iznini yönetin.">{manage && <div className="admin-actions"><button disabled={loading} onClick={() => setEditor({ kind: 'import' })}>Excel’den Toplu Yükle</button><button className="primary" disabled={loading} onClick={() => setEditor({ kind: 'user' })}><Icon name="plus" size={17}/>Yeni Kullanıcı</button></div>}</PageTitle>
-    <div className="admin-tabs">{hasPermission(currentUser, 'definitions.departments.view') && <a className="button" href="#/definitions/departments">Birim Tanımları</a>}{hasPermission(currentUser, 'definitions.titles.view') && <a className="button" href="#/definitions/titles">Ünvan Tanımları</a>}<button onClick={() => { setError(''); setLoading(true); setReload(v => v + 1); }}>Yenile</button></div>
+    <div className="admin-tabs">{hasPermission(currentUser, 'definitions.titles.view') && <a className="button" href="#/definitions/titles">Ünvan Tanımları</a>}<button onClick={() => { setError(''); setLoading(true); setReload(v => v + 1); }}>Yenile</button></div>
     {message && <div className="success-banner" role="status">{message}</div>}{error && <div className="error-banner" role="alert">{error}</div>}
-    {loading ? <p className="loading">Kullanıcılar yükleniyor…</p> : <section className="card"><div className="padded"><Field label="Kullanıcı Ara"><input placeholder="Ad, soyad, e-posta, ünvan, telefon veya birim…" value={search} onChange={e => setSearch(e.target.value)}/></Field></div>
-    {filtered.length ? <div className="table-scroll"><table><thead><tr><th>Kullanıcı</th><th>Ünvan / Telefon</th><th>Birim</th><th>Kullanıcı Tipi</th><th>Hesap</th><th>Talep Oluşturma</th><th>İşlemler</th></tr></thead><tbody>{filtered.map(user => <tr key={user.id}>
+    {loading ? <p className="loading">Kullanıcılar yükleniyor…</p> : <section className="card"><div className="padded"><Field label="Kullanıcı Ara"><input placeholder="Ad, soyad, e-posta, ünvan, telefon…" value={search} onChange={e => setSearch(e.target.value)}/></Field></div>
+    {filtered.length ? <div className="table-scroll"><table><thead><tr><th>Kullanıcı</th><th>Ünvan / Telefon</th><th>Kullanıcı Tipi</th><th>Hesap</th><th>Talep Oluşturma</th><th>İşlemler</th></tr></thead><tbody>{filtered.map(user => <tr key={user.id}>
       <td><strong>{user.name}</strong><div>{user.email}</div>{user.mustChangePassword && <small className="muted">Parola değişimi bekleniyor</small>}</td>
-      <td>{user.title || '—'}<div>{user.phoneNumber || '—'}</div></td><td>{user.department}</td><td>{user.userType === 'Admin' ? 'Admin' : 'Standart Kullanıcı'}</td><td>{user.isActive ? 'Aktif' : 'Pasif'}</td><td>{user.canCreateRequests ? 'Yetkili' : 'Yetkisiz'}</td>
+      <td>{user.title || '—'}<div>{user.phoneNumber || '—'}</div></td><td>{user.userType === 'Admin' ? 'Admin' : 'Standart Kullanıcı'}</td><td>{user.isActive ? 'Aktif' : 'Pasif'}</td><td>{user.canCreateRequests ? 'Yetkili' : 'Yetkisiz'}</td>
       <td><div className="admin-actions">{manage && editable(user) && <button onClick={() => setEditor({ kind: 'user', user })}>Düzenle</button>}{hasPermission(currentUser, 'users.password') && editable(user) && <button onClick={() => setEditor({ kind: 'password', user })}>Geçici Parola Ver</button>}</div></td>
     </tr>)}</tbody></table></div> : <Empty title="Kullanıcı bulunamadı" description="Aramayı değiştirin veya yeni bir kullanıcı oluşturun."/>}</section>}
-    {editor?.kind === 'user' && <UserEditor user={editor.user} currentUserId={currentUser.id} departments={departments} titles={titles} onClose={() => setEditor(null)} onSave={async input => {
+    {editor?.kind === 'user' && <UserEditor user={editor.user} currentUserId={currentUser.id} titles={titles} onClose={() => setEditor(null)} onSave={async input => {
       if (editor.user) await adminService.updateUser(editor.user.id, input); else await adminService.createUser(input);
       await saved(editor.user ? 'Kullanıcı güncellendi. Mevcut oturumları sonlandırıldı.' : 'Kullanıcı oluşturuldu. Geçici parolayla ilk girişte parolasını değiştirecek.');
     }}/>}

@@ -54,7 +54,7 @@ export function PageTitle({ title, description, children }: TitleProps) {
 export function Empty({ title = 'Talep bulunamadı', description = 'Filtreleri değiştirerek yeniden deneyebilirsiniz.', children }: Partial<TitleProps>) {
   return <div className="empty"><Icon name="search" size={34}/><h3>{title}</h3><p>{description}</p>{children}</div>;
 }
-export function Modal({ title, children, onClose, wide = false }: ContentProps & { title: string; onClose: () => void; wide?: boolean }) {
+export function Modal({ title, children, onClose, wide = false, screenClose = false }: ContentProps & { title: string; onClose: () => void; wide?: boolean; screenClose?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const previous = document.activeElement;
@@ -63,5 +63,8 @@ export function Modal({ title, children, onClose, wide = false }: ContentProps &
     dialog.showModal();
     return () => { dialog.close(); if (previous instanceof HTMLElement) previous.focus(); };
   }, []);
-  return <dialog ref={ref} className={wide ? 'modal-wide' : undefined} onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target === ref.current) onClose(); }} aria-labelledby="modal-title"><div className="modal-body"><header><h2 id="modal-title">{title}</h2><button className="icon-button" aria-label="Pencereyi kapat" onClick={onClose}><Icon name="close"/></button></header>{children}</div></dialog>;
+  return <dialog ref={ref} className={[wide ? 'modal-wide' : '', screenClose ? 'modal-screen' : ''].filter(Boolean).join(' ')} onCancel={event => { event.preventDefault(); if (!screenClose) onClose(); }} aria-labelledby="modal-title">
+    {screenClose && <button type="button" className="modal-screen-close" aria-label="Pencereyi kapat" onClick={onClose}><Icon name="close" size={20}/>Kapat</button>}
+    <div className="modal-body"><header><h2 id="modal-title">{title}</h2>{!screenClose && <button type="button" className="icon-button" aria-label="Pencereyi kapat" onClick={onClose}><Icon name="close"/></button>}</header>{children}</div>
+  </dialog>;
 }

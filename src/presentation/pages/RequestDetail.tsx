@@ -4,23 +4,23 @@ import type { RequestRecord } from '../../domain/requests/types';
 import type { RequestAction } from '../../application/requests/types';
 import type { LiveRequestService } from '../../infrastructure/httpRequestService';
 import { errorMessage } from '../errors';
-import { hasPermission, departments, people, personName } from '../../domain/identity/organization';
+import { hasPermission, titles, people, personName } from '../../domain/identity/organization';
 import { priorities, statuses, typeDefinitions } from '../../domain/requests/model';
 import { Badge, Delay, Empty, Field, Icon, Modal, PageTitle, Select } from '../components/ui';
 import { dateText, dateTime } from '../format';
-const actions = { assign: 'Sorumlu Ata / Değiştir', department: 'Başka Birime Yönlendir', priority: 'Öncelik Güncelle', status: 'Durum Güncelle', complete: 'Talebi Tamamla', approval: 'Onaya Gönder', revise: 'Revizyon İste', close: 'Talebi Kapat' };
+const actions = { assign: 'Sorumlu Ata / Değiştir', title: 'Başka Ünvana Yönlendir', priority: 'Öncelik Güncelle', status: 'Durum Güncelle', complete: 'Talebi Tamamla', approval: 'Onaya Gönder', revise: 'Revizyon İste', close: 'Talebi Kapat' };
 function ActionDialog({ record, action, onClose, onAction }: { record: RequestRecord; action: RequestAction; onClose: () => void; onAction: (action: RequestAction, value: string, note: string) => Promise<void> }) {
-  const options = action === 'assign' ? people.filter(p => p.department === record.department && hasPermission(p, 'requests.process')).map(p => ({ value: p.id, label: `${p.name} · ${p.department}` })) : action === 'department' ? departments : action === 'priority' ? priorities : statuses.filter(s => record.allowedStatuses?.includes(s) ?? ['İşlemde', 'Beklemede'].includes(s));
-  const [value, setValue] = useState(action === 'assign' ? record.assignee : action === 'department' ? record.department : action === 'priority' ? record.priority : record.status);
+  const options = action === 'assign' ? people.filter(p => p.title === record.targetTitle && hasPermission(p, 'requests.process')).map(p => ({ value: p.id, label: `${p.name} · ${p.title}` })) : action === 'title' ? titles : action === 'priority' ? priorities : statuses.filter(s => record.allowedStatuses?.includes(s) ?? ['İşlemde', 'Beklemede'].includes(s));
+  const [value, setValue] = useState(action === 'assign' ? record.assignee : action === 'title' ? record.targetTitle : action === 'priority' ? record.priority : record.status);
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const needsValue = ['assign', 'department', 'priority', 'status'].includes(action);
+  const needsValue = ['assign', 'title', 'priority', 'status'].includes(action);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError('');
     try { await onAction(action, value, note); onClose(); } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   }
-  return <Modal title={actions[action]} onClose={onClose}><form onSubmit={submit}><p className="modal-context">{record.number} · {record.subject}</p>{action === 'department' && <div className="notice">Yönlendirme sonrasında mevcut sorumlu kaldırılır. Yeni bir sorumlu atayabilirsiniz.</div>}{action === 'close' && <div className="notice">Talep kapatılacak; kayıt ve geçmişi korunacaktır.</div>}{needsValue && <Field label={action === 'assign' ? 'Sorumlu' : action === 'department' ? 'Birim' : action === 'priority' ? 'Öncelik' : 'Durum'} required><Select options={options} placeholder="Seçiniz" value={value} onChange={e => setValue(e.target.value)} required/></Field>}<Field label={action === 'revise' ? 'Revizyon gerekçesi' : 'İşlem notu'} required={action === 'revise'}><textarea rows={4} value={note} onChange={e => setNote(e.target.value)} maxLength={2000} required={action === 'revise'} placeholder="Zaman çizelgesine eklenecek açıklama…"/></Field>{error && <div className="error-banner" role="alert">{error}</div>}<div className="modal-footer"><button type="button" onClick={onClose} disabled={busy}>Vazgeç</button><button className="primary" disabled={busy}>{busy ? 'Kaydediliyor…' : 'İşlemi Uygula'}</button></div></form></Modal>;
+  return <Modal title={actions[action]} onClose={onClose}><form onSubmit={submit}><p className="modal-context">{record.number} · {record.subject}</p>{action === 'title' && <div className="notice">Yönlendirme sonrasında mevcut sorumlu kaldırılır. Yeni bir sorumlu atayabilirsiniz.</div>}{action === 'close' && <div className="notice">Talep kapatılacak; kayıt ve geçmişi korunacaktır.</div>}{needsValue && <Field label={action === 'assign' ? 'Sorumlu' : action === 'title' ? 'Ünvan' : action === 'priority' ? 'Öncelik' : 'Durum'} required><Select options={options} placeholder="Seçiniz" value={value} onChange={e => setValue(e.target.value)} required/></Field>}<Field label={action === 'revise' ? 'Revizyon gerekçesi' : 'İşlem notu'} required={action === 'revise'}><textarea rows={4} value={note} onChange={e => setNote(e.target.value)} maxLength={2000} required={action === 'revise'} placeholder="Zaman çizelgesine eklenecek açıklama…"/></Field>{error && <div className="error-banner" role="alert">{error}</div>}<div className="modal-footer"><button type="button" onClick={onClose} disabled={busy}>Vazgeç</button><button className="primary" disabled={busy}>{busy ? 'Kaydediliyor…' : 'İşlemi Uygula'}</button></div></form></Modal>;
 }
 export default function RequestDetail({ record, service, refresh, created }: { record: RequestRecord | undefined; service: LiveRequestService; refresh: () => Promise<void>; created: boolean }) {
   const [action, setAction] = useState<RequestAction | null>(null);
@@ -44,7 +44,7 @@ export default function RequestDetail({ record, service, refresh, created }: { r
     finally { setBusy(false); }
   }
   const failedUploads = JSON.parse(sessionStorage.getItem(`uploadFailures:${record.id}`) || '[]') as string[];
-  const info = [['Talep Eden', personName(record.requester)], ['İlgili Kişi', personName(record.relatedPerson)], ['İlgili Birim', record.department], ['Sorumlu', personName(record.assignee)], ['Talep Türü', record.type], ['Kategori', record.category], ['Gizlilik', record.privacy], ['Oluşturulma', dateTime(record.createdAt)], ['Son Tarih', dateText(record.dueDate)], ['Tamamlanma', record.completedAt ? dateTime(record.completedAt) : '—'], ['Kapatılma', record.closedAt ? dateTime(record.closedAt) : '—']];
+  const info = [['Talep Eden', personName(record.requester)], ['İlgili Kişi', personName(record.relatedPerson)], ['İlgili Ünvan', record.targetTitle], ['Sorumlu', personName(record.assignee)], ['Talep Türü', record.type], ['Kategori', record.category], ['Gizlilik', record.privacy], ['Oluşturulma', dateTime(record.createdAt)], ['Son Tarih', dateText(record.dueDate)], ['Tamamlanma', record.completedAt ? dateTime(record.completedAt) : '—'], ['Kapatılma', record.closedAt ? dateTime(record.closedAt) : '—']];
   const definition = typeDefinitions.find(t => t.name === record.type);
   async function addComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!record) return; setError(''); setBusy(true);
@@ -61,7 +61,3 @@ export default function RequestDetail({ record, service, refresh, created }: { r
     <aside className="detail-aside"><section className="card"><div className="card-header"><h2>Talep Bilgileri</h2><Icon name="info" size={18}/></div><dl className="info-list">{info.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section><section className="card padded"><h2>Talep İşlemleri</h2><p className="section-description">Yetkinize uygun işlemleri uygulayabilirsiniz.</p><div className="action-list">{record.allowedActions?.includes('claim') && <button className="primary" disabled={busy} onClick={() => void claim()}>Üzerime Al</button>}{(Object.entries(actions) as [RequestAction, string][]).filter(([key]) => record.allowedActions?.includes(key)).map(([key, label]) => <button key={key} className={key === 'complete' ? 'primary' : ''} disabled={key === 'close' && record.status !== 'Tamamlandı'} onClick={() => setAction(key)}><Icon name={key === 'complete' ? 'check' : key === 'assign' ? 'users' : key === 'close' ? 'lock' : 'arrow'} size={17}/>{label}</button>)}</div>{record.allowedActions?.includes('complete') && <small className="muted">Kapatmak için önce talebi tamamlayın.</small>}</section></aside></div>
     {action && <ActionDialog record={record} action={action} onClose={() => setAction(null)} onAction={async (key, value, note) => { try { await service.update(record.id, key, value, note); } catch (e) { await refresh().catch(() => {}); throw e; } await refresh(); setMessage('Talep güncellendi. İşlem zaman çizelgesine eklendi.'); }}/>}</>;
 }
-
-
-
-

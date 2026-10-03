@@ -5,26 +5,24 @@ export const adminRoles = [
   { value: 'SystemAdmin', label: 'Admin' },
 ] as const;
 export type AdminRole = typeof adminRoles[number]['value'];
-export interface AdminDepartment { id: string; name: string; isActive: boolean }
 export interface AdminTitle { id: string; name: string; isActive: boolean }
 export interface AdminUser {
-  id: string; email: string; name: string; departmentId: string; department: string;
+  id: string; email: string; name: string;
   firstName: string; lastName: string; title: string; titleId?: string; phoneNumber?: string; userType: 'Standard' | 'Admin';
   roleCode?: string; roleName?: string; permissions?: string[]; role: AdminRole; canCreateRequests: boolean; isActive: boolean; mustChangePassword: boolean;
 }
 export interface UserInput {
-  email: string; name: string; departmentId: string; role: AdminRole; roleCode?: string;
+  email: string; name: string; role: AdminRole; roleCode?: string;
   firstName: string; lastName: string; title: string; titleId: string; phoneNumber: string; userType: 'Standard' | 'Admin';
   canCreateRequests: boolean; isActive: boolean; temporaryPassword?: string;
 }
 export interface ImportUserRow {
   rowNumber: number; firstName: string; lastName: string; email: string; title: string; phoneNumber: string;
-  department: string; departmentId?: string; canCreateRequests: boolean; errors: string[];
+  canCreateRequests: boolean; errors: string[];
 }
 export interface ImportUsersResult { committed: boolean; total: number; created: number; rows: ImportUserRow[] }
 export const adminService = {
   users: (signal?: AbortSignal) => api<AdminUser[]>('/admin/users', 'GET', undefined, signal),
-  departments: (signal?: AbortSignal) => api<AdminDepartment[]>('/admin/departments', 'GET', undefined, signal),
   titles: (signal?: AbortSignal) => api<AdminTitle[]>('/admin/titles', 'GET', undefined, signal),
   createUser: (input: UserInput) => api<AdminUser>('/admin/users', 'POST', input),
   updateUser: (id: string, input: UserInput) => api<AdminUser>(`/admin/users/${encodeURIComponent(id)}`, 'PUT', input),
@@ -35,4 +33,3 @@ export const adminService = {
     return api<ImportUsersResult>('/admin/users/import', 'POST', form);
   },
 };
-

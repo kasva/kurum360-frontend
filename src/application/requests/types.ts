@@ -1,13 +1,13 @@
 import type { RequestDraft, RequestRecord } from '../../domain/requests/types';
 
-export type RequestAction = 'assign' | 'department' | 'priority' | 'status' | 'complete' | 'approval' | 'revise' | 'close';
+export type RequestAction = 'assign' | 'title' | 'priority' | 'status' | 'complete' | 'approval' | 'revise' | 'close';
 export interface RequestFilters {
   search?: string;
   type?: string;
   category?: string;
   status?: string;
   priority?: string;
-  department?: string;
+  targetTitle?: string;
   assignee?: string;
   requester?: string;
   from?: string;

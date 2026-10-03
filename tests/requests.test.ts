@@ -9,7 +9,7 @@ import { createSeed } from '../src/infrastructure/seed';
 
 import type { RequestDraft, RequestTiming } from '../src/domain/requests/types';
 const now = new Date('2026-09-29T12:00:00+03:00');
-const validDraft = (): RequestDraft => ({ ...emptyDraft(), category: 'Donanım', subject: 'Yeni bilgisayar talebi', description: 'Ekip çalışması için yeni bilgisayar gerekiyor.', department: 'Bilgi İşlem', dueDate: '2026-10-05' });
+const validDraft = (): RequestDraft => ({ ...emptyDraft(), category: 'Donanım', subject: 'Yeni bilgisayar talebi', description: 'Ekip çalışması için yeni bilgisayar gerekiyor.', targetTitle: 'VHKİ', dueDate: '2026-10-05' });
 const setup = () => { const repository = new MemoryRequestRepository(createSeed(now)); return { repository, service: createRequestService(repository, people[0], () => now) }; };
 
 test('Örnek kayıtların son tarih ve yaşam döngüsü tarihleri tutarlıdır', () => {
@@ -48,7 +48,7 @@ test('Tür tanımları zorunlu alan, geçmiş/gelecek tarih ve süre doğrulamas
   assert.ok(validateDraft(complaint, now).incidentDate);
   complaint.dynamic.incidentDate = '2026-09-28';
   assert.deepEqual(validateDraft(complaint, now), {});
-  const meeting = { ...validDraft(), type: 'Görüşme İsteği', dynamic: { reason: 'Planlama', preferredDate: '2026-09-28T15:00', duration: '0', meetingMode: 'Yüz yüze', participants: 'Birim temsilcileri' } };
+  const meeting = { ...validDraft(), type: 'Görüşme İsteği', dynamic: { reason: 'Planlama', preferredDate: '2026-09-28T15:00', duration: '0', meetingMode: 'Yüz yüze', participants: 'Personel' } };
   assert.ok(validateDraft(meeting, now).preferredDate);
   assert.ok(validateDraft(meeting, now).duration);
   meeting.dynamic.preferredDate = '2026-10-01T15:00'; meeting.dynamic.duration = '30';
@@ -60,7 +60,7 @@ test('Tür tanımları zorunlu alan, geçmiş/gelecek tarih ve süre doğrulamas
 test('Arama Türkçe harfleri destekler, filtreler birlikte çalışır, sıralama ve sayfa dilimleri tutarlıdır', () => {
   const seed = createSeed(now);
   const target = seed[0];
-  const filtered = selectRequests(seed, { search: 'ERİŞİM', department: target.department, type: target.type, category: target.category, status: target.status, priority: target.priority, requester: target.requester, assignee: target.assignee, from: target.createdAt.slice(0, 10), to: target.createdAt.slice(0, 10) }, now);
+  const filtered = selectRequests(seed, { search: 'ERİŞİM', targetTitle: target.targetTitle, type: target.type, category: target.category, status: target.status, priority: target.priority, requester: target.requester, assignee: target.assignee, from: target.createdAt.slice(0, 10), to: target.createdAt.slice(0, 10) }, now);
   assert.deepEqual(filtered.map(r => r.id), [target.id]);
   assert.equal(selectRequests(seed, { search: 'koordinasyon' }, now).length, seed.length);
   const byDate = selectRequests(seed, { sort: 'createdAt:asc' }, now);
@@ -80,9 +80,9 @@ test('Atama, yönlendirme, yorum ve yaşam döngüsü ortak veriyi ve zaman çiz
   const get = async () => { const record = (await service.list()).find(r => r.id === created.id); assert.ok(record); return record; };
   await service.update(created.id, 'assign', 'p1');
   assert.equal((await get()).status, 'Atandı');
-  await service.update(created.id, 'department', 'Mali İşler');
+  await service.update(created.id, 'title', 'Vaiz');
   assert.equal((await get()).assignee, '');
-  assert.equal((await get()).department, 'Mali İşler');
+  assert.equal((await get()).targetTitle, 'Vaiz');
   await service.update(created.id, 'assign', 'p4');
   await service.update(created.id, 'priority', 'Kritik');
   await service.comment(created.id, 'İnceleme tamamlandı.');

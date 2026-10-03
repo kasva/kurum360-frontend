@@ -15,7 +15,7 @@ export interface RequestDraft {
   subject: string;
   description: string;
   priority: string;
-  department: string;
+  targetTitle: string;
   relatedPerson: string;
   assignee: string;
   dueDate: string;
@@ -65,4 +65,3 @@ export type DynamicField = BaseField & (
 );
 export interface TypeDefinition { name: RequestType; description: string; icon: string; fields: readonly DynamicField[]; code?: string; baseType?: string; isActive?: boolean }
 export type ValidationErrors = Partial<Record<string, string>>;
-

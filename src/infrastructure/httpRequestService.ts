@@ -1,5 +1,5 @@
 import type { User, UserRole } from '../domain/identity/organization';
-import { departments, people } from '../domain/identity/organization';
+import { titles, people } from '../domain/identity/organization';
 import { categories, categoryDefinitions, priorities, privacyLevels, statuses, typeDefinitions } from '../domain/requests/model';
 import type { RequestRecord, RequestDraft } from '../domain/requests/types';
 import type { RequestService, RequestFilters, RequestAction } from '../application/requests/types';
@@ -21,10 +21,10 @@ const priorityCodes = ['Low', 'Normal', 'High', 'Critical'];
 const privacyCodes = ['Normal', 'Confidential', 'TopSecret'];
 const statusCodes = ['New', 'Evaluating', 'Assigned', 'InProgress', 'OnHold', 'AwaitingApproval', 'Completed', 'Closed', 'Rejected', 'Cancelled'];
 const roleCodes = ['SystemAdmin', 'GeneralManager', 'DeputyGeneralManager', 'DepartmentManager', 'Employee', 'Viewer'];
-const roleNames: UserRole[] = ['Sistem yöneticisi', 'Genel Müdür', 'Genel Müdür Yardımcısı', 'Birim yöneticisi', 'Çalışan', 'İzleyici / raporlama kullanıcısı'];
-interface WireUser { id: string; name: string; department: string; departmentId: string; role: string; canCreateRequests?: boolean; mustChangePassword?: boolean; roleCode?: string; roleName?: string; permissions?: string[] }
+const roleNames: UserRole[] = ['Sistem yöneticisi', 'Genel Müdür', 'Genel Müdür Yardımcısı', 'Ünvan yöneticisi', 'Çalışan', 'İzleyici / raporlama kullanıcısı'];
+interface WireUser { id: string; name: string; title: string; titleId: string; role: string; canCreateRequests?: boolean; mustChangePassword?: boolean; roleCode?: string; roleName?: string; permissions?: string[] }
 interface WireRecord extends Omit<RequestRecord, 'type' | 'category' | 'priority' | 'privacy' | 'status' | 'tags' | 'dynamic'> {
-  allowedStatuses?: string[]; type: string; category: string; priority: string; privacy: string; status: string; tags: string[]; departmentId: string; dynamic: Record<string, string>;
+  allowedStatuses?: string[]; type: string; category: string; priority: string; privacy: string; status: string; tags: string[]; targetTitleId: string; dynamic: Record<string, string>;
 }
 export interface Page { items: RequestRecord[]; totalCount: number; page: number; pageSize: number }
 export type DashboardData = ReturnType<typeof summarize> & { recent: RequestRecord[]; approvalCount: number; urgentCount: number };
@@ -39,7 +39,7 @@ export interface LiveRequestService extends RequestService {
   upload(record: RequestRecord, file: File): Promise<RequestRecord>;
 }
 let csrf = '';
-const departmentIds = new Map<string, string>();
+const titleIds = new Map<string, string>();
 let unauthorized: (() => void) | undefined;
 export const onUnauthorized = (callback: () => void) => { unauthorized = callback; };
 export class ApiError extends Error { constructor(public status: number, message: string) { super(message); } }
@@ -56,7 +56,7 @@ export async function api<T>(path: string, method = 'GET', body?: unknown, signa
     const error = await response.json().catch(() => ({ title: `İstek başarısız (${response.status}).` })) as { title: string; errors?: Record<string, string[]> };
     if (response.status === 401 && path !== '/auth/login' && path !== '/auth/me') unauthorized?.();
     if (error.errors) {
-      const fields = Object.fromEntries(Object.entries(error.errors).map(([key, value]) => [key === 'departmentId' ? 'department' : key, value.join(' ')]));
+      const fields = Object.fromEntries(Object.entries(error.errors).map(([key, value]) => [key === 'targetTitleId' ? 'targetTitle' : key, value.join(' ')]));
       throw new RequestValidationError(fields);
     }
     throw new ApiError(response.status, error.title);
@@ -75,9 +75,9 @@ export const auth = {
     await api('/auth/change-password', 'POST', { currentPassword, newPassword }); csrf = '';
   },
   async directory() {
-    const [units, users, metadata] = await Promise.all([api<{ id: string; name: string; isActive: boolean }[]>('/departments'), api<WireUser[]>('/users'), api<DefinitionMetadata>('/metadata')]);
-    departmentIds.clear(); units.forEach(d => departmentIds.set(d.name, d.id));
-    departments.splice(0, departments.length, ...units.filter(d => d.isActive).map(d => d.name));
+    const [titleDefinitions, users, metadata] = await Promise.all([api<{ id: string; name: string; isActive: boolean }[]>('/titles'), api<WireUser[]>('/users'), api<DefinitionMetadata>('/metadata')]);
+    titleIds.clear(); titleDefinitions.forEach(d => titleIds.set(d.name, d.id));
+    titles.splice(0, titles.length, ...titleDefinitions.filter(d => d.isActive).map(d => d.name));
     people.splice(0, people.length, ...users.map(mapUser));
     if (metadata.typeDefinitions) typeDefinitions.splice(0, typeDefinitions.length, ...metadata.typeDefinitions.map(t => ({
       ...builtinTypes[typeCodes.indexOf(t.baseType)], name: t.name, code: t.code, baseType: t.baseType,
@@ -107,7 +107,7 @@ export function createHttpRequestService(): LiveRequestService {
     async page(filters = {}, page = 1, pageSize = 10, signal) {
       const mapped = { ...filters, type: undefined, category: undefined, typeCode: filters.type ? typeCode(filters.type) : undefined,
         categoryCode: filters.category ? categoryCode(filters.category) : undefined, status: code(statuses, statusCodes, filters.status || ''),
-        priority: code(priorities, priorityCodes, filters.priority || ''), departmentId: departmentIds.get(filters.department || ''), department: undefined, page, pageSize };
+        priority: code(priorities, priorityCodes, filters.priority || ''), targetTitleId: titleIds.get(filters.targetTitle || ''), targetTitle: undefined, page, pageSize };
       const query = new URLSearchParams(Object.entries(mapped).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]));
       const result = await api<Omit<Page, 'items'> & { items: WireRecord[] }>(`/requests?${query}`, 'GET', undefined, signal);
       return { ...result, items: result.items.map(remember) };
@@ -123,7 +123,7 @@ export function createHttpRequestService(): LiveRequestService {
         category: categoryCodes.includes(categoryCode(draft.category)) ? categoryCode(draft.category) : 'CorporateProcess',
         typeCode: typeCode(draft.type), categoryCode: categoryCode(draft.category),
         priority: code(priorities, priorityCodes, draft.priority), privacy: code(privacyLevels, privacyCodes, draft.privacy),
-        departmentId: departmentIds.get(draft.department), relatedPersonId: draft.relatedPerson || null, assigneeId: draft.assignee || null,
+        targetTitleId: titleIds.get(draft.targetTitle), relatedPersonId: draft.relatedPerson || null, assigneeId: draft.assignee || null,
         tags: draft.tags.split(',').map(t => t.trim()).filter(Boolean),
         dynamic: Object.fromEntries((typeDefinitions.find(t => t.name === draft.type)?.fields ?? []).map(f => [f.key, draft.dynamic[f.key] ?? ''])), attachments: undefined,
       }));
@@ -139,7 +139,7 @@ export function createHttpRequestService(): LiveRequestService {
     },
     async comment(id, text) { await api(`/requests/${id}/comments`, 'POST', { text, version: versions.get(id) }); },
     async update(id, action: RequestAction, value = '', note = '') {
-      const mappedValue = action === 'status' ? code(statuses, statusCodes, value) : action === 'priority' ? code(priorities, priorityCodes, value) : action === 'department' ? departmentIds.get(value) : value;
+      const mappedValue = action === 'status' ? code(statuses, statusCodes, value) : action === 'priority' ? code(priorities, priorityCodes, value) : action === 'title' ? titleIds.get(value) : value;
       await api(`/requests/${id}/actions`, 'POST', { action, value: mappedValue, note, version: versions.get(id) });
     },
     async claim(record) { remember(await api<WireRecord>(`/requests/${record.id}/claim`, 'POST', { version: record.version })); },
@@ -150,5 +150,3 @@ export function createHttpRequestService(): LiveRequestService {
   };
   return service;
 }
-
-

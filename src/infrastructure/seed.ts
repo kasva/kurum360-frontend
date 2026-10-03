@@ -1,5 +1,5 @@
 import { localDate, priorities, statuses } from '../domain/requests/model';
-import { departments } from '../domain/identity/organization';
+import { titles } from '../domain/identity/organization';
 import type { Category, RequestRecord, RequestType } from '../domain/requests/types';
 export function createSeed(now = new Date()): RequestRecord[] {
   const at = (days: number) => { const d = new Date(now); d.setDate(d.getDate() + days); return d; };
@@ -13,7 +13,7 @@ export function createSeed(now = new Date()): RequestRecord[] {
     ['Yeni dizüstü bilgisayar ihtiyacı', 'Talep', 'Donanım', 0],
     ['Çalışan deneyimi görüşmesi', 'Görüşme İsteği', 'Toplantı', 1],
     ['Yemekhane hizmet kalitesi', 'Şikâyet', 'Sosyal Haklar', 2],
-    ['Birimler arası raporlama standardı', 'Yönetici Talimatı', 'Yazılım', 0],
+    ['Personel arasında raporlama standardı', 'Yönetici Talimatı', 'Yazılım', 0],
     ['Arşiv alanının düzenlenmesi', 'Öneri', 'Bina ve Tesis', 2],
     ['İç portal erişilebilirlik iyileştirmesi', 'Öneri', 'Yazılım', 0],
   ];
@@ -30,13 +30,13 @@ export function createSeed(now = new Date()): RequestRecord[] {
     return {
       id: `demo-${i + 1}`, number: `TLP-${now.getFullYear()}-${String(1048 - i).padStart(5, '0')}`,
       subject: subject + (i >= 12 ? ` · ${Math.floor(i / 12) + 1}. dönem` : ''),
-      description: 'İlgili birimin değerlendirmesi ve gerekli çalışmaların planlanması talep edilmektedir. Sürecin kurum içi koordinasyonla takip edilmesi ve sonuç hakkında bilgi verilmesi beklenmektedir. Bu kayıt prototip için oluşturulmuş örnek veridir.',
-      type, category, department: departments[unit], requester, relatedPerson: `p${unit + 1}`, assignee,
+      description: 'İlgili ünvanın değerlendirmesi ve gerekli çalışmaların planlanması talep edilmektedir. Sürecin kurum içi koordinasyonla takip edilmesi ve sonuç hakkında bilgi verilmesi beklenmektedir. Bu kayıt prototip için oluşturulmuş örnek veridir.',
+      type, category, targetTitle: titles[unit], requester, relatedPerson: `p${unit + 1}`, assignee,
       priority: priorities[(i * 3) % 4], status, dueDate: localDate(at(completed ? createdOffset + 5 : i % 9 - 4)),
       createdAt, completedAt, closedAt, privacy: i % 11 === 0 ? 'Gizli' : 'Normal', tags: 'Kurum içi, Takip',
-      dynamic: type === 'Şikâyet' ? { incidentDate: localDate(at(createdOffset - 1)), incident: 'Hizmet sürecinin iyileştirilmesi için değerlendirme talep ediliyor.' } : type === 'Görüşme İsteği' ? { reason: 'Birim çalışmaları hakkında değerlendirme', preferredDate: `${localDate(at(completed ? createdOffset + 2 : 3))}T14:00`, duration: '30', meetingMode: 'Yüz yüze', participants: 'Birim temsilcileri' } : {},
+      dynamic: type === 'Şikâyet' ? { incidentDate: localDate(at(createdOffset - 1)), incident: 'Hizmet sürecinin iyileştirilmesi için değerlendirme talep ediliyor.' } : type === 'Görüşme İsteği' ? { reason: 'Ünvan çalışmaları hakkında değerlendirme', preferredDate: `${localDate(at(completed ? createdOffset + 2 : 3))}T14:00`, duration: '30', meetingMode: 'Yüz yüze', participants: 'Ünvan temsilcileri' } : {},
       attachments: i % 3 === 0 ? [{ name: 'talep-bilgi-notu.pdf', size: 124000, demo: true }] : [],
-      comments: i % 2 === 0 ? [{ id: `c-${i}`, author: assignee || 'p1', date: createdAt, text: 'Talep alındı. İlgili birim ile değerlendirme yapılacak. (Örnek yorum)' }] : [],
+      comments: i % 2 === 0 ? [{ id: `c-${i}`, author: assignee || 'p1', date: createdAt, text: 'Talep alındı. İlgili ünvan ile değerlendirme yapılacak. (Örnek yorum)' }] : [],
       timeline: [{ id: `e-${i}`, actor: requester, date: createdAt, text: 'Talep oluşturuldu. (Örnek kayıt)' }, { id: `s-${i}`, actor: 'gm', date: closedAt || completedAt || createdAt, text: `Mevcut durum: ${status}. (Örnek başlangıç)` }],
     };
   });
