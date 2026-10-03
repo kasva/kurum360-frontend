@@ -1,0 +1,10 @@
+node_modules
+dist
+backups
+artifacts
+.env
+.env.*
+**/bin
+**/obj
+**/data
+**/TestResults

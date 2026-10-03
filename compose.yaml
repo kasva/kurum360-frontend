@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: kurum360
+      POSTGRES_USER: kurum360
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kurum360 -d kurum360"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  migrate:
+    build: .
+    command: ["--migrate"]
+    environment:
+      ConnectionStrings__Database: Host=postgres;Database=kurum360;Username=kurum360;Password=${POSTGRES_PASSWORD}
+      Bootstrap__AdminEmail: ${ADMIN_EMAIL:?Set ADMIN_EMAIL in .env}
+      Bootstrap__AdminPassword: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      DataProtection__KeyDirectory: /data/keys
+    volumes:
+      - app_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+  app:
+    build: .
+    environment:
+      ConnectionStrings__Database: Host=postgres;Database=kurum360;Username=kurum360;Password=${POSTGRES_PASSWORD}
+      Storage__Root: /data/attachments
+      DataProtection__KeyDirectory: /data/keys
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+    ports:
+      - "127.0.0.1:5080:8080"
+    volumes:
+      - app_data:/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+volumes:
+  postgres_data:
+  app_data:
