@@ -4,7 +4,6 @@ import RequestList from './pages/RequestList';
 import RequestDetail from './pages/RequestDetail';
 import NewRequest from './pages/NewRequest';
 import Admin from './pages/Admin';
-import Roles from './pages/Roles';
 import { hasPermission } from '../domain/identity/organization';
 import Definitions from './pages/Definitions';
 import type { DefinitionKind } from '../infrastructure/definitionService';
@@ -56,7 +55,7 @@ export default function App({ service, user, logout, refreshSession }: { service
   else if (path === '/requests') page = canViewRequests ? <RequestList key={route} service={service} user={user} query={query}/> : <Empty title="Talep görüntüleme izniniz yok"/>;
   else if (path === '/new') page = user.canCreateRequests ? <NewRequest service={service} user={user} refresh={async () => {}} navigate={navigate}/> : <Empty title="Talep oluşturma yetkiniz yok" description="Bu yetkiyi sistem yöneticiniz düzenleyebilir."/>;
   else if (path === '/admin') page = has('users.view') ? <Admin currentUser={user} refreshSession={refreshSession}/> : <Empty title="Kullanıcı görüntüleme izniniz yok"/>;
-  else if (path === '/roles') page = has('roles.view') ? <Roles user={user} refreshSession={refreshSession}/> : <Empty title="Rol görüntüleme izniniz yok"/>;
+  else if (path === '/roles') page = has('users.view') ? <Admin currentUser={user} refreshSession={refreshSession}/> : <Empty title="Kullanıcı yönetimi yetkiniz yok"/>;
   else if (['/definitions/types', '/definitions/categories', '/definitions/departments'].includes(path)) page = has('definitions.' + path.split('/')[2] + '.view') ? <Definitions key={path} kind={path.split('/')[2] as DefinitionKind} user={user} refreshSession={refreshSession}/> : <Empty title="Tanım görüntüleme izniniz yok"/>;
   else if (path.startsWith('/requests/')) page = canViewRequests ? <Detail key={path} id={path.slice(10)} service={service} created={new URLSearchParams(query).has('created')} userId={user.id}/> : <Empty title="Talep görüntüleme izniniz yok"/>;
   else page = <Empty title="Sayfa bulunamadı"><a className="button primary" href="#/">Dashboard'a dön</a></Empty>;
@@ -64,7 +63,7 @@ export default function App({ service, user, logout, refreshSession }: { service
     <a href="#/" className="brand"><span className="brand-mark"><Icon name="building" size={34}/></span><span><strong>Kurum<span>360</span></strong><small>Talep ve İş Takip Sistemi</small></span></a>
     <div className="workspace-label">YÖNETİM PANELİ</div><nav aria-label="Ana gezinme"><a className={`nav-link ${path === '/' ? 'active' : ''}`} href="#/"><Icon name="home"/>Dashboard</a>
     {canViewRequests && <><div className="nav-group"><Icon name="file"/><span>Talepler</span></div><div className="nav-children">{navItems.map(([url, label, active]) => <a key={url} href={`#${url}`} className={path === '/requests' && active ? 'active' : ''}><span className="nav-dot"/>{label}</a>)}</div></>}
-    {(has('users.view') || has('roles.view')) && <><div className="nav-group"><Icon name="users"/><span>Kullanıcı Yönetimi</span></div><div className="nav-children">{has('users.view') && <a href="#/admin" className={path === '/admin' ? 'active' : ''}><span className="nav-dot"/>Kullanıcılar</a>}{has('roles.view') && <a href="#/roles" className={path === '/roles' ? 'active' : ''}><span className="nav-dot"/>Roller ve Yetkiler</a>}</div></>}
+    {has('users.view') && <><div className="nav-group"><Icon name="users"/><span>Kullanıcı Yönetimi</span></div><div className="nav-children"><a href="#/admin" className={path === '/admin' || path === '/roles' ? 'active' : ''}><span className="nav-dot"/>Kullanıcılar</a></div></>}
     {definitionKinds.length > 0 && <><div className="nav-group"><Icon name="building"/><span>Sistem Tanımları</span></div><div className="nav-children">{definitionKinds.map(kind => <a key={kind} href={`#/definitions/${kind}`} className={path === `/definitions/${kind}` ? 'active' : ''}><span className="nav-dot"/>{({ types: 'Talep Türleri', categories: 'Kategoriler', departments: 'Birimler' })[kind]}</a>)}</div></>}</nav>
     <div className="sidebar-bottom">{user.canCreateRequests && <div className="sidebar-create"><strong>Yeni bir talep iletin.</strong><a className="button primary" href="#/new"><Icon name="plus" size={17}/>Yeni Talep Oluştur</a></div>}<div className="sidebar-footer"><span className="online-dot"/>Kurum360 <span>v1.0</span></div></div>
     </aside>{mobileMenu && <button className="sidebar-overlay" aria-label="Menüyü kapat" onClick={() => setMobileMenu(false)}/>}

@@ -19,3 +19,7 @@
 .permission-groups fieldset { border: 1px solid var(--border, #dde3eb); border-radius: 8px; padding: 14px; min-width: 0; }
 .permission-groups legend { padding: 0 8px; font-weight: 600; }
 .permission-groups .admin-checkbox { margin: 10px 0; align-items: flex-start; }
+.import-preview { max-height: 360px; overflow: auto; }
+.import-error { color: #b42318; min-width: 180px; white-space: normal; }
+dialog.modal-wide { width: min(1050px, calc(100% - 32px)); }
+dialog.modal-wide .modal-footer { flex-wrap: wrap; }
