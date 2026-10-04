@@ -48,7 +48,7 @@ function UserEditor({ user, currentUserId, titles, onClose, onSave }: {
     <label className="admin-checkbox"><input type="checkbox" checked={input.userType === 'Admin' || input.canCreateRequests} disabled={input.userType === 'Admin'} onChange={e => setInput({ ...input, canCreateRequests: e.target.checked })}/>Talep açabilir</label>
     <p className="muted">Standart kullanıcı atanan işleri yürütür; yalnızca bu izin verilirse talep açar. Admin tüm işlemlere yetkilidir.</p>
     <label className="admin-checkbox"><input type="checkbox" checked={input.isActive} disabled={self} onChange={e => setInput({ ...input, isActive: e.target.checked })}/>Aktif kullanıcı</label>
-    {!user && <Field label="Geçici Parola" required><input type="password" autoComplete="new-password" required minLength={6} value={input.temporaryPassword} onChange={e => setInput({ ...input, temporaryPassword: e.target.value })}/><small>En az 6 karakter; büyük/küçük harf, rakam ve özel karakter. Kullanıcı ilk girişte değiştirecek.</small></Field>}
+    {!user && <Field label="Geçici Parola" required><input type="password" autoComplete="new-password" required minLength={6} value={input.temporaryPassword} onChange={e => setInput({ ...input, temporaryPassword: e.target.value })}/><small>En az 6 karakter. Kullanıcı ilk girişte değiştirecek.</small></Field>}
     {user && <p className="notice">Hesap güncellemesi kullanıcının mevcut oturumlarını sonlandırır. Yeniden giriş yapması gerekir.</p>}
     {error && <div className="error-banner" role="alert">{error}</div>}
     <div className="modal-footer"><button type="button" disabled={busy} onClick={onClose}>Vazgeç</button><button className="primary" disabled={busy}>{busy ? 'Kaydediliyor…' : user ? 'Değişiklikleri Kaydet' : 'Kullanıcı Oluştur'}</button></div>
@@ -62,7 +62,7 @@ function PasswordEditor({ user, onClose, onSave }: { user: AdminUser; onClose: (
   }
   return <Modal title="Geçici Parola Ver" onClose={() => { if (!busy) onClose(); }}><form onSubmit={submit}><p>{user.name} · {user.email}</p>
     <p className="notice">Mevcut oturumlar sonlandırılır. Kullanıcı yeni geçici parolayla giriş yapıp parolasını değiştirecek.</p>
-    <Field label="Yeni Geçici Parola" required><input type="password" autoComplete="new-password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)}/><small>Büyük/küçük harf, rakam ve özel karakter kullanın.</small></Field>
+    <Field label="Yeni Geçici Parola" required><input type="password" autoComplete="new-password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)}/><small>En az 6 karakter.</small></Field>
     {error && <div className="error-banner" role="alert">{error}</div>}<div className="modal-footer"><button type="button" disabled={busy} onClick={onClose}>Vazgeç</button><button className="primary" disabled={busy}>{busy ? 'Kaydediliyor…' : 'Geçici Parolayı Kaydet'}</button></div>
   </form></Modal>;
 }

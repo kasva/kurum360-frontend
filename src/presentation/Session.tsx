@@ -47,7 +47,7 @@ export default function Session() {
     {error && <div className="error-banner" role="alert">{error}</div>}
     {!user && <Field label="E-posta" required><input type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} required/></Field>}
     <Field label={user ? 'Mevcut parola' : 'Parola'} required><input type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required/></Field>
-    {user && <Field label="Yeni parola" required><input type="password" autoComplete="new-password" minLength={6} value={newPassword} onChange={e => setNewPassword(e.target.value)} required/><small>En az 6 karakter; büyük/küçük harf, rakam ve özel karakter.</small></Field>}
+    {user && <Field label="Yeni parola" required><input type="password" autoComplete="new-password" minLength={6} value={newPassword} onChange={e => setNewPassword(e.target.value)} required/><small>En az 6 karakter.</small></Field>}
     <button className="primary" disabled={busy}>{busy ? 'İşleniyor…' : user ? 'Parolayı değiştir' : 'Giriş yap'}</button>
     {user && <button type="button" onClick={logout}>Çıkış yap</button>}
     {!user && <p className="muted">Hesabınızı kurum sistem yöneticisi oluşturur.</p>}

@@ -31,7 +31,7 @@ export default function UserImport({ onClose, onImported }: { onClose: () => voi
           setFile(undefined); setError('En fazla 2 MB boyutunda bir .xlsx dosyası seçin.');
         } else setFile(selected);
       }}/></Field>
-      <Field label="Ortak Geçici Parola" required><input type="password" autoComplete="new-password" minLength={6} value={password} disabled={busy} onChange={e => setPassword(e.target.value)}/><small>En az 6 karakter; büyük/küçük harf, rakam ve sembol. Her kullanıcı ilk girişinde kendi parolasını belirler.</small></Field>
+      <Field label="Ortak Geçici Parola" required><input type="password" autoComplete="new-password" minLength={6} value={password} disabled={busy} onChange={e => setPassword(e.target.value)}/><small>En az 6 karakter. Her kullanıcı ilk girişinde kendi parolasını belirler.</small></Field>
     </>}
     {error && <div className="error-banner" role="alert">{error}</div>}
     {result && <>
