@@ -1,5 +1,9 @@
 export type UserRole = string;
-export interface User { id: string; name: string; title: string; role: UserRole; titleId?: string; canCreateRequests?: boolean; mustChangePassword?: boolean; roleCode?: string; permissions?: string[] }
+export interface User { id: string; name: string; title: string; role: UserRole; titleId?: string; departmentId?: string; titleGroupId?: string; isOperator?: boolean; canCreateRequests?: boolean; mustChangePassword?: boolean; roleCode?: string; permissions?: string[] }
+export interface OrganizationDefinition { id: string; name: string; isActive: boolean; parentId?: string; titleGroupId?: string }
+export const departments: OrganizationDefinition[] = [];
+export const titleGroups: OrganizationDefinition[] = [];
+export const titleCatalog: OrganizationDefinition[] = [];
 export const titles = ['VHKİ', 'Şef', 'İmam-Hatip', 'Vaiz', 'Memur', 'Kur’an Kursu Öğreticisi'];
 export const people: User[] = [
   { id: 'gm', name: 'Deniz Örnek', title: 'İlçe Müftüsü', role: 'Genel Müdür' },

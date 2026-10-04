@@ -16,6 +16,7 @@ export interface RequestDraft {
   description: string;
   priority: string;
   targetTitle: string;
+  targetDepartmentId?: string; targetTitleGroupId?: string; sourceDepartmentId?: string; routingPending?: boolean;
   relatedPerson: string;
   assignee: string;
   dueDate: string;

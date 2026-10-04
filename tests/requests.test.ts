@@ -10,7 +10,7 @@ import { createSeed } from '../src/infrastructure/seed';
 import type { RequestDraft, RequestTiming } from '../src/domain/requests/types';
 const now = new Date('2026-09-29T12:00:00+03:00');
 const validDraft = (): RequestDraft => ({ ...emptyDraft(), category: 'Donanım', subject: 'Yeni bilgisayar talebi', description: 'Ekip çalışması için yeni bilgisayar gerekiyor.', targetTitle: 'VHKİ', dueDate: '2026-10-05' });
-const setup = () => { const repository = new MemoryRequestRepository(createSeed(now)); return { repository, service: createRequestService(repository, people[0], () => now) }; };
+const setup = () => { const repository = new MemoryRequestRepository(createSeed(now)); return { repository, service: createRequestService(repository, { ...people[0], permissions: ['requests.assign'] }, () => now) }; };
 
 test('Örnek kayıtların son tarih ve yaşam döngüsü tarihleri tutarlıdır', () => {
   for (const record of createSeed(now)) {

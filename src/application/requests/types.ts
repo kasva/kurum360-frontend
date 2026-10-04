@@ -1,6 +1,6 @@
 import type { RequestDraft, RequestRecord } from '../../domain/requests/types';
 
-export type RequestAction = 'assign' | 'title' | 'priority' | 'status' | 'complete' | 'approval' | 'revise' | 'close';
+export type RequestAction = 'group' | 'department' | 'assign' | 'title' | 'priority' | 'status' | 'complete' | 'approval' | 'revise' | 'close';
 export interface RequestFilters {
   search?: string;
   type?: string;
@@ -8,6 +8,7 @@ export interface RequestFilters {
   status?: string;
   priority?: string;
   targetTitle?: string;
+  targetDepartmentId?: string; targetTitleGroupId?: string;
   assignee?: string;
   requester?: string;
   from?: string;

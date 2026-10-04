@@ -34,7 +34,7 @@ export const isOverdue = (r: RequestTiming, now = new Date()) => isOpen(r) && de
 export const emptyDraft = (): RequestDraft => ({ type: typeDefinitions.find(t => t.isActive !== false)?.name ?? '', category: '', subject: '', description: '', priority: 'Normal', targetTitle: '', relatedPerson: '', assignee: '', dueDate: '', privacy: 'Normal', tags: '', dynamic: {}, attachments: [] });
 export function validateDraft(draft: RequestDraft, now = new Date()) {
   const errors: ValidationErrors = {};
-  for (const [key, label] of Object.entries({ type: 'Talep türü', category: 'Kategori', subject: 'Konu', description: 'Açıklama', targetTitle: 'İlgili ünvan', dueDate: 'Son tarih' }) as [keyof RequestDraft, string][]) {
+  for (const [key, label] of Object.entries({ type: 'Talep türü', category: 'Kategori', subject: 'Konu', description: 'Açıklama', dueDate: 'Son tarih' }) as [keyof RequestDraft, string][]) {
     if (!String(draft[key] || '').trim()) errors[key] = `${label} zorunludur.`;
   }
   if (draft.subject.trim().length > 160) errors.subject = 'Konu en fazla 160 karakter olabilir.';
@@ -43,6 +43,7 @@ export function validateDraft(draft: RequestDraft, now = new Date()) {
   if (!isOption(categories, draft.category)) errors.category = 'Geçerli bir kategori seçin.';
   if (!isOption(priorities, draft.priority)) errors.priority = 'Geçerli bir öncelik seçin.';
   if (!isOption(privacyLevels, draft.privacy)) errors.privacy = 'Geçerli bir gizlilik seviyesi seçin.';
+  if (!draft.targetTitle && !draft.targetTitleGroupId && !draft.targetDepartmentId) errors.targetTitle = 'Hedef ünvan grubu seçiniz.';
   const definition = typeDefinitions.find(t => t.name === draft.type);
   if (!definition || definition.isActive === false) errors.type = 'Aktif bir talep türü seçin.';
   if (categoryDefinitions.length && !categoryDefinitions.some(c => c.name === draft.category && c.isActive)) errors.category = 'Aktif bir kategori seçin.';

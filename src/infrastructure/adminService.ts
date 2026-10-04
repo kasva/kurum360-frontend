@@ -5,20 +5,20 @@ export const adminRoles = [
   { value: 'SystemAdmin', label: 'Admin' },
 ] as const;
 export type AdminRole = typeof adminRoles[number]['value'];
-export interface AdminTitle { id: string; name: string; isActive: boolean }
+export interface AdminTitle { id: string; name: string; isActive: boolean; titleGroupId: string }
 export interface AdminUser {
   id: string; email: string; name: string;
-  firstName: string; lastName: string; title: string; titleId?: string; phoneNumber?: string; userType: 'Standard' | 'Admin';
+  firstName: string; lastName: string; title: string; titleId?: string; departmentId?: string; titleGroupId?: string; isOperator?: boolean; phoneNumber?: string; userType: 'Standard' | 'Admin';
   roleCode?: string; roleName?: string; permissions?: string[]; role: AdminRole; canCreateRequests: boolean; isActive: boolean; mustChangePassword: boolean;
 }
 export interface UserInput {
   email: string; name: string; role: AdminRole; roleCode?: string;
-  firstName: string; lastName: string; title: string; titleId: string; phoneNumber: string; userType: 'Standard' | 'Admin';
+  firstName: string; lastName: string; title: string; titleId: string; departmentId: string; isOperator: boolean; phoneNumber: string; userType: 'Standard' | 'Admin';
   canCreateRequests: boolean; isActive: boolean; temporaryPassword?: string;
 }
 export interface ImportUserRow {
   rowNumber: number; firstName: string; lastName: string; email: string; title: string; phoneNumber: string;
-  canCreateRequests: boolean; errors: string[];
+  canCreateRequests: boolean; errors: string[]; department: string;
 }
 export interface ImportUsersResult { committed: boolean; total: number; created: number; rows: ImportUserRow[] }
 export const adminService = {
