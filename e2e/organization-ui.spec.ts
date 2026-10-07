@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 async function setup(page: Page, operator = false) {
   const departments = [{id: 'root', name: 'İl Müftülüğü', isActive: true, parentId: null}, {id: 'district', name: 'B İlçe Müftülüğü', parentId: 'root', isActive: true}];
   const groups = [{id: 'office', name: 'İdari İşler', isActive: true}];
-  const staffGroups = [{id: 'office', name: 'İdari İşler', isActive: true}, {id: 'support', name: 'Destek Ekibi', isActive: true}];
+  const staffGroups = [{id: 'office', departmentId: 'root', acceptsExternalRequests: true, name: 'İdari İşler', isActive: true}, {id: 'backup', departmentId: 'root', acceptsExternalRequests: true, name: 'Yedek Ekip', isActive: true}, {id: 'support', departmentId: 'district', acceptsExternalRequests: true, name: 'Destek Ekibi', isActive: true}, {id: 'district-office', departmentId: 'district', acceptsExternalRequests: false, name: 'Kurum İçi Ekip', isActive: true}];
   const titles = [{id: 'clerk', name: 'VHKİ', titleGroupId: 'office', isActive: true}, {id: 'chief', name: 'Şef', titleGroupId: 'office', isActive: true}];
   const me = { id: 'admin', name: 'Test Yönetici', email: 'admin@example.org', firstName: 'Test', lastName: 'Yönetici',
     title: 'VHKİ', titleId: 'clerk', personnelGroupId: 'office', titleGroupId: 'office', departmentId: 'root', role: 'SystemAdmin', roleCode: 'SystemAdmin',
@@ -21,10 +21,10 @@ async function setup(page: Page, operator = false) {
     const request = route.request(); const url = new URL(request.url()); const path = url.pathname.replace('/api/v1', '');
     if (request.method() !== 'GET') {
       const body = request.postDataJSON() as Record<string, unknown>; writes.push({path, body});
-      if (path === '/requests') { record = {...record, ...body, subject: String(body.subject), description: String(body.description), routingPending: body.targetDepartmentId !== 'root', allowedActions: []}; await route.fulfill({status:201,json:record}); return; }
+      if (path === '/requests') { record = {...record, ...body, subject: String(body.subject), description: String(body.description), routingPending: !body.targetPersonnelGroupId, allowedActions: []}; await route.fulfill({status:201,json:record}); return; }
       if (path.endsWith('/actions')) { record = {...record, routingPending: false, version: record.version + 1, allowedActions: ['claim']}; await route.fulfill({status:204}); return; }
       if (path.endsWith('/claim')) { record = {...record, assignee: 'admin', version: record.version + 1, allowedActions: []}; await route.fulfill({json:record}); return; }
-      if (path === '/definitions/personnelGroups') { staffGroups.push({id: 'new-staff-group', name: String(body.name), isActive: Boolean(body.isActive)}); await route.fulfill({json:staffGroups.at(-1)}); return; }
+      if (path === '/definitions/personnelGroups') { staffGroups.push({id: 'new-staff-group', name: String(body.name), isActive: Boolean(body.isActive), departmentId: String(body.departmentId), acceptsExternalRequests: Boolean(body.acceptsExternalRequests)}); await route.fulfill({json:staffGroups.at(-1)}); return; }
       if (path === '/definitions/titleGroups') { groups.push({id: 'new-group', name: String(body.name), isActive: Boolean(body.isActive)}); await route.fulfill({json:groups.at(-1)}); return; }
       if (path === '/definitions/titles') { titles.push({id:'new-title',name:String(body.name),titleGroupId:String(body.titleGroupId),isActive:true}); await route.fulfill({status:201,json:titles.at(-1)}); return; }
       if (path === '/admin/users') { people.push({...me,...body,id:'new-person',name:String(body.name)}); await route.fulfill({status:201,json:people.at(-1)}); return; }
@@ -36,6 +36,8 @@ async function setup(page: Page, operator = false) {
       : ['/title-groups','/definitions/titleGroups'].includes(path) ? groups
       : ['/titles','/admin/titles','/definitions/titles'].includes(path) ? titles
       : ['/users','/admin/users'].includes(path) ? people
+      : path === '/work-units' ? [{id:'education',name:'Eğitim',departmentId:'root',isActive:true}]
+      : path === '/duty-locations' ? [{id:'mosque',name:'Merkez Camii',departmentId:'root',isActive:true}]
       : path === '/metadata' ? {typeDefinitions:[{code:'Request',name:'Talep',description:'Standart talep',baseType:'Request',isActive:true}],categoryDefinitions:[{code:'Hardware',name:'Donanım',isActive:true}]}
       : path === '/requests' ? {items,totalCount:items.length,page:1,pageSize:10}
       : path === '/dashboard/summary' ? {total:items.length,open:items.length,overdue:0,completed:0,critical:0,approvalCount:0,urgentCount:0,approvals:[],urgent:[],recent:items,titles:[],distribution:[],trend:[]}
@@ -64,7 +66,7 @@ test('external request hides responsible person and can be sent without a group'
   await page.getByLabel('Kategori', {exact:true}).selectOption('Donanım');
   await page.getByLabel('Konu', {exact:true}).fill('İlçeye gönderilen iş');
   await page.getByLabel('Açıklama', {exact:true}).fill('Operatör yönlendirecek');
-  await page.getByLabel('Hedef Birim', {exact:true}).selectOption('district');
+  await page.getByLabel('Hedef Müftülük', {exact:true}).selectOption('district');
   await expect(page.getByLabel('Sorumlu', {exact:true})).toHaveCount(0);
   await page.getByLabel('Son Tarih', {exact:true}).fill('2099-12-01');
   for (let i=0;i<3;i++) await page.getByRole('button',{name:'Devam Et'}).click();
@@ -93,22 +95,22 @@ test('user form selects personnel group independently of title', async ({page}) 
   await page.getByRole('button',{name:'Yeni Kullanıcı',exact:true}).click();
   const dialog=page.getByRole('dialog');
   await dialog.getByLabel('Ad',{exact:true}).fill('Ayşe'); await dialog.getByLabel('Soyad',{exact:true}).fill('Yılmaz');
-  await dialog.getByLabel('Birim',{exact:true}).selectOption('district');
+  await dialog.getByLabel('Müftülük',{exact:true}).selectOption('district');
   await dialog.getByLabel('Ünvan',{exact:true}).selectOption('chief');
-  await dialog.getByLabel('Personel Grubu',{exact:true}).selectOption('support');
+  await dialog.getByLabel('Destek Ekibi',{exact:true}).check();
   await dialog.getByLabel('Ünvan',{exact:true}).selectOption('clerk');
-  await expect(dialog.getByLabel('Personel Grubu',{exact:true})).toHaveValue('support');
-  await dialog.getByLabel('Birim operatörü',{exact:true}).check();
+  await expect(dialog.getByLabel('Destek Ekibi',{exact:true})).toBeChecked();
+  await dialog.getByLabel('Talep yönlendirici',{exact:true}).check();
   await dialog.getByLabel('E-posta',{exact:true}).fill('ayse@example.org');
   await dialog.getByLabel('Geçici Parola',{exact:true}).fill('123456');
   await dialog.getByRole('button',{name:'Kullanıcı Oluştur',exact:true}).click();
   await expect(dialog).toHaveCount(0);
-  expect(writes.find(w=>w.path==='/admin/users')?.body).toMatchObject({departmentId:'district',titleId:'clerk',personnelGroupId:'support',isOperator:true});
+  expect(writes.find(w=>w.path==='/admin/users')?.body).toMatchObject({departmentId:'district',titleId:'clerk',personnelGroupIds:['support'],isOperator:true});
 });
 
 test('operator routes incoming work to group before it appears in claim pool', async ({page}) => {
   const writes = await setup(page,true); await page.goto('/#/requests?view=routing');
-  await expect(page.getByRole('heading',{name:'Atama Bekleyenler',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Yönlendirme Havuzu',exact:true})).toBeVisible();
   await page.getByRole('link',{name:'Gelen iş',exact:true}).click();
   await page.getByRole('button',{name:'Personel Grubuna Yönlendir',exact:true}).click();
   await page.getByRole('dialog').getByLabel('Personel Grubu',{exact:true}).selectOption('office');
@@ -133,4 +135,47 @@ test('operator routes incoming work to group before it appears in claim pool', a
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('cell',{name:'Teknik Destek',exact:true})).toBeVisible();
   expect(writes.find(w=>w.path==='/definitions/personnelGroups')?.body).toMatchObject({name:'Teknik Destek',isActive:true,description:'Destek taleplerini karşılar'});
+});
+
+
+test('external group selection filters by institution and internal-only visibility', async ({page}) => {
+  const writes = await setup(page); await page.goto('/#/new');
+  await page.getByLabel('Hedef Müftülük',{exact:true}).selectOption('district');
+  const pool=page.getByLabel('Personel Grubu',{exact:true});
+  await expect(pool.locator('option')).toHaveCount(2);
+  await pool.selectOption('support');
+  await expect(page.getByLabel('Sorumlu',{exact:true})).toHaveCount(0);
+  await page.getByLabel('Hedef Müftülük',{exact:true}).selectOption('root');
+  await expect(pool).toHaveValue('');
+  await expect(pool.locator('option[value="support"]')).toHaveCount(0);
+  await page.getByLabel('Hedef Müftülük',{exact:true}).selectOption('district'); await pool.selectOption('support');
+  await page.getByLabel('Kategori',{exact:true}).selectOption('Donanım');
+  await page.getByLabel('Konu',{exact:true}).fill('Dış havuz işi');
+  await page.getByLabel('Açıklama',{exact:true}).fill('Doğrudan grubun havuzuna gidecek');
+  await page.getByLabel('Son Tarih',{exact:true}).fill('2099-12-01');
+  for(let i=0;i<3;i++) await page.getByRole('button',{name:'Devam Et'}).click();
+  await page.getByRole('button',{name:'Talebi Gönder',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Dış havuz işi',exact:true})).toBeVisible();
+  expect(writes.find(w=>w.path==='/requests')?.body).toMatchObject({targetDepartmentId:'district',targetPersonnelGroupId:'support',assigneeId:null});
+});
+
+test('user can have two pools alongside a separate work unit and duty location', async ({page}) => {
+  const writes=await setup(page); await page.goto('/#/admin');
+  await page.getByRole('button',{name:'Yeni Kullanıcı',exact:true}).click(); const dialog=page.getByRole('dialog');
+  await dialog.getByLabel('Ad',{exact:true}).fill('Ali'); await dialog.getByLabel('Soyad',{exact:true}).fill('Yılmaz');
+  await dialog.getByLabel('Müftülük',{exact:true}).selectOption('root');
+  await dialog.getByLabel('Ünvan',{exact:true}).selectOption('chief');
+  await dialog.getByLabel('İdari İşler',{exact:true}).check(); await dialog.getByLabel('Yedek Ekip',{exact:true}).check();
+  await dialog.getByLabel('Çalışma Birimi',{exact:true}).selectOption('education'); await dialog.getByLabel('Görev Yeri',{exact:true}).selectOption('mosque');
+  await dialog.getByLabel('E-posta',{exact:true}).fill('ali@example.org'); await dialog.getByLabel('Geçici Parola',{exact:true}).fill('123456');
+  await dialog.getByRole('button',{name:'Kullanıcı Oluştur',exact:true}).click(); await expect(dialog).toHaveCount(0);
+  expect(writes.find(w=>w.path==='/admin/users')?.body).toMatchObject({departmentId:'root',titleId:'chief',personnelGroupIds:['office','backup'],workUnitId:'education',dutyLocationId:'mosque'});
+});
+
+test('title can be saved without a reporting group', async ({page}) => {
+  const writes=await setup(page);await page.goto('/#/definitions/titles');
+  await page.getByRole('button',{name:'Yeni Ünvan',exact:true}).click();
+  await page.getByLabel('Ünvan Adı',{exact:true}).fill('Uzman Vaiz'); await page.getByRole('button',{name:'Kaydet',exact:true}).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(writes.find(w=>w.path==='/definitions/titles')?.body.titleGroupId).toBeUndefined();
 });

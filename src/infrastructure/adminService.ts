@@ -8,12 +8,12 @@ export type AdminRole = typeof adminRoles[number]['value'];
 export interface AdminTitle { id: string; name: string; isActive: boolean; titleGroupId: string }
 export interface AdminUser {
   id: string; email: string; name: string;
-  firstName: string; lastName: string; title: string; titleId?: string; departmentId?: string; titleGroupId?: string; personnelGroupId?: string; isOperator?: boolean; phoneNumber?: string; userType: 'Standard' | 'Admin';
+  firstName: string; lastName: string; title: string; titleId?: string; departmentId?: string; titleGroupId?: string; personnelGroupId?: string; personnelGroupIds?: string[]; workUnitId?: string; dutyLocationId?: string; isInstitutionManager?: boolean; canViewProvince?: boolean; isOperator?: boolean; phoneNumber?: string; userType: 'Standard' | 'Admin';
   roleCode?: string; roleName?: string; permissions?: string[]; role: AdminRole; canCreateRequests: boolean; isActive: boolean; mustChangePassword: boolean;
 }
 export interface UserInput {
   email: string; name: string; role: AdminRole; roleCode?: string;
-  firstName: string; lastName: string; title: string; titleId: string; departmentId: string; personnelGroupId?: string; isOperator: boolean; phoneNumber: string; userType: 'Standard' | 'Admin';
+  firstName: string; lastName: string; title: string; titleId: string; departmentId: string; personnelGroupId?: string; personnelGroupIds?: string[]; workUnitId?: string; dutyLocationId?: string; isInstitutionManager?: boolean; canViewProvince?: boolean; isOperator: boolean; phoneNumber: string; userType: 'Standard' | 'Admin';
   canCreateRequests: boolean; isActive: boolean; temporaryPassword?: string;
 }
 export interface ImportUserRow {

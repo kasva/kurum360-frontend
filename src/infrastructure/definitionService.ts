@@ -1,10 +1,10 @@
 import { api } from './httpRequestService';
 
-export type DefinitionKind = 'types' | 'categories' | 'titles' | 'titleGroups' | 'personnelGroups' | 'departments';
+export type DefinitionKind = 'types' | 'categories' | 'titles' | 'titleGroups' | 'personnelGroups' | 'departments' | 'workUnits' | 'dutyLocations';
 export interface DefinitionItem {
-  code?: string; id?: string; name: string; isActive: boolean; description?: string; baseType?: string; titleGroupId?: string; parentId?: string;
+  code?: string; id?: string; name: string; isActive: boolean; description?: string; baseType?: string; titleGroupId?: string; parentId?: string; departmentId?: string; acceptsExternalRequests?: boolean;
 }
-export interface DefinitionInput { name: string; isActive: boolean; description?: string; baseType?: string; titleGroupId?: string; parentId?: string | null }
+export interface DefinitionInput { name: string; isActive: boolean; description?: string; baseType?: string; titleGroupId?: string; parentId?: string | null; departmentId?: string; acceptsExternalRequests?: boolean }
 export const formTemplates = [
   { value: 'Request', label: 'Standart Talep' }, { value: 'Complaint', label: 'Şikâyet (olay tarihi ve bilgileri)' },
   { value: 'Suggestion', label: 'Öneri' }, { value: 'Meeting', label: 'Görüşme İsteği (görüşme ayrıntıları)' },

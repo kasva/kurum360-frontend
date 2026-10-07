@@ -1,5 +1,5 @@
 import type { User, UserRole } from '../domain/identity/organization';
-import { titles, people, departments, titleGroups, personnelGroups, titleCatalog } from '../domain/identity/organization';
+import { titles, people, departments, titleGroups, personnelGroups, titleCatalog, workUnits, dutyLocations } from '../domain/identity/organization';
 import { categories, categoryDefinitions, priorities, privacyLevels, statuses, typeDefinitions } from '../domain/requests/model';
 import type { RequestRecord, RequestDraft } from '../domain/requests/types';
 import type { RequestService, RequestFilters, RequestAction } from '../application/requests/types';
@@ -22,7 +22,7 @@ const privacyCodes = ['Normal', 'Confidential', 'TopSecret'];
 const statusCodes = ['New', 'Evaluating', 'Assigned', 'InProgress', 'OnHold', 'AwaitingApproval', 'Completed', 'Closed', 'Rejected', 'Cancelled'];
 const roleCodes = ['SystemAdmin', 'GeneralManager', 'DeputyGeneralManager', 'DepartmentManager', 'Employee', 'Viewer'];
 const roleNames: UserRole[] = ['Sistem yöneticisi', 'Genel Müdür', 'Genel Müdür Yardımcısı', 'Ünvan yöneticisi', 'Çalışan', 'İzleyici / raporlama kullanıcısı'];
-interface WireUser { id: string; name: string; title: string; titleId: string; departmentId?: string; titleGroupId?: string; personnelGroupId?: string; isOperator?: boolean; role: string; canCreateRequests?: boolean; mustChangePassword?: boolean; roleCode?: string; roleName?: string; permissions?: string[] }
+interface WireUser { id: string; name: string; title: string; titleId: string; departmentId?: string; titleGroupId?: string; personnelGroupId?: string; personnelGroupIds?: string[]; workUnitId?: string; dutyLocationId?: string; isInstitutionManager?: boolean; canViewProvince?: boolean; isOperator?: boolean; role: string; canCreateRequests?: boolean; mustChangePassword?: boolean; roleCode?: string; roleName?: string; permissions?: string[] }
 interface WireRecord extends Omit<RequestRecord, 'type' | 'category' | 'priority' | 'privacy' | 'status' | 'tags' | 'dynamic'> {
   allowedStatuses?: string[]; type: string; category: string; priority: string; privacy: string; status: string; tags: string[]; targetTitleId: string; dynamic: Record<string, string>;
 }
@@ -75,7 +75,8 @@ export const auth = {
     await api('/auth/change-password', 'POST', { currentPassword, newPassword }); csrf = '';
   },
   async directory() {
-    const [titleDefinitions, users, metadata, units, groups, staffGroups] = await Promise.all([api<{ id: string; name: string; isActive: boolean; titleGroupId: string }[]>('/titles'), api<WireUser[]>('/users'), api<DefinitionMetadata>('/metadata'), api<typeof departments>('/departments'), api<typeof titleGroups>('/title-groups'), api<typeof personnelGroups>('/personnel-groups')]);
+    const [titleDefinitions, users, metadata, units, groups, staffGroups, work, places] = await Promise.all([api<{ id: string; name: string; isActive: boolean; titleGroupId: string }[]>('/titles'), api<WireUser[]>('/users'), api<DefinitionMetadata>('/metadata'), api<typeof departments>('/departments'), api<typeof titleGroups>('/title-groups'), api<typeof personnelGroups>('/personnel-groups'), api<typeof workUnits>('/work-units'), api<typeof dutyLocations>('/duty-locations')]);
+    workUnits.splice(0, workUnits.length, ...work); dutyLocations.splice(0, dutyLocations.length, ...places);
     personnelGroups.splice(0, personnelGroups.length, ...staffGroups); departments.splice(0, departments.length, ...units); titleGroups.splice(0, titleGroups.length, ...groups); titleCatalog.splice(0, titleCatalog.length, ...titleDefinitions);
     titleIds.clear(); titleDefinitions.forEach(d => titleIds.set(d.name, d.id));
     titles.splice(0, titles.length, ...titleDefinitions.filter(d => d.isActive).map(d => d.name));

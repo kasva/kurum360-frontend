@@ -19,7 +19,7 @@ test('HTTP service maps Turkish labels to stable codes, strips stale dynamic fie
       : path.endsWith('/titles') ? [{ id: 'unit-id', name: 'Test Ünvan', isActive: true }]
       : path.endsWith('/departments') ? [{id: 'department-id', name: 'İl Müftülüğü', isActive: true}]
       : (path.endsWith('/title-groups') || path.endsWith('/personnel-groups')) ? [{id: 'group-id', name: 'İdari İşler', isActive: true}]
-      : path.endsWith('/users') ? []
+      : (path.endsWith('/users') || path.endsWith('/work-units') || path.endsWith('/duty-locations')) ? []
       : path.includes('/requests?') ? { items: [wire], totalCount: 300, page: 2, pageSize: 20 }
       : path.endsWith('/actions') ? undefined : wire;
     return response === undefined ? new Response(null, { status: 204 }) : Response.json(response);

@@ -11,6 +11,9 @@ import { Empty, Icon, Modal } from './components/ui';
 import type { RequestRecord } from '../domain/requests/types';
 import type { User } from '../domain/identity/organization';
 import type { DashboardData, LiveRequestService } from '../infrastructure/httpRequestService';
+import { api } from '../infrastructure/httpRequestService';
+import { departments, personnelGroups, workUnits, dutyLocations, groupIds } from '../domain/identity/organization';
+import { dateTime } from './format';
 import { errorMessage } from './errors';
 
 function Detail({ id, service, created, userId }: { id: string; service: LiveRequestService; created: boolean; userId: string }) {
@@ -38,9 +41,17 @@ function Home({ service, user }: { service: LiveRequestService; user: User }) {
 export default function App({ service, user, logout, refreshSession }: { service: LiveRequestService; user: User; logout: () => Promise<void>; refreshSession: () => Promise<void> }) {
   const [route, setRoute] = useState(window.location.hash.slice(1) || '/');
   const has = (permission: string) => hasPermission(user, permission);
-  const definitionKinds = (['types', 'categories', 'titles', 'titleGroups', 'personnelGroups', 'departments'] as const).filter(kind => has('definitions.' + kind + '.view'));
-  const canViewRequests = ['requests.view.own', 'requests.view.title', 'requests.view.all'].some(has);
+  const definitionKinds = (['types', 'categories', 'titles', 'titleGroups', 'personnelGroups', 'departments', 'workUnits', 'dutyLocations'] as const).filter(kind => has('definitions.' + kind + '.view'));
+  const canViewRequests = ['requests.view.own', 'requests.view.title', 'requests.view.department', 'requests.view.all'].some(has);
   const [search, setSearch] = useState('');
+  const [notifications, setNotifications] = useState<{unread: number; items: {id: string; requestId: string; number: string; subject: string; text: string; date: string; isUnread: boolean}[]}>({unread: 0, items: []});
+  const [notificationError, setNotificationError] = useState('');
+  useEffect(() => {
+    let active = true;
+    const refresh = () => api<typeof notifications>('/notifications').then(data => { if (active) { setNotifications(data?.items ? data : {unread: 0, items: []}); setNotificationError(''); } }).catch(e => { if (active) setNotificationError(errorMessage(e)); });
+    void refresh(); const timer = window.setInterval(() => void refresh(), 60000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, []);
   const [popup, setPopup] = useState('');
   const [mobileMenu, setMobileMenu] = useState(false);
   useEffect(() => { const changed = () => { setRoute(window.location.hash.slice(1) || '/'); setMobileMenu(false); window.scrollTo(0, 0); }; window.addEventListener('hashchange', changed); return () => window.removeEventListener('hashchange', changed); }, []);
@@ -49,7 +60,8 @@ export default function App({ service, user, logout, refreshSession }: { service
   const view = new URLSearchParams(query).get('view');
   const navItems: [string, string, boolean][] = [['/requests', 'Tüm Talepler', !view], ['/requests?view=assigned', 'Bana Atananlar', view === 'assigned'], ['/requests?view=created', 'Oluşturduklarım', view === 'created']];
   if (has('requests.claim')) navItems.push(['/requests?view=queue', 'İş Havuzum', view === 'queue']);
-  if (user.isOperator) navItems.push(['/requests?view=routing', 'Atama Bekleyenler', view === 'routing']);
+  navItems.push(['/requests?view=incoming', 'Müftülüğe Gelenler', view === 'incoming'], ['/requests?view=outgoing', 'Müftülükten Gidenler', view === 'outgoing']);
+  if (user.isOperator || user.isInstitutionManager) navItems.push(['/requests?view=routing', 'Yönlendirme Havuzu', view === 'routing']);
   const initials = user.name.split(' ').map(n => n[0]).join('').slice(0, 2);
   let page;
   if (path === '/') page = canViewRequests ? <Home service={service} user={user}/> : <Empty title="Kurum360'a hoş geldiniz" description="Yetkili olduğunuz ekranları sol menüden açabilirsiniz."/>;
@@ -57,7 +69,7 @@ export default function App({ service, user, logout, refreshSession }: { service
   else if (path === '/new') page = user.canCreateRequests ? <NewRequest service={service} user={user} refresh={async () => {}} navigate={navigate}/> : <Empty title="Talep oluşturma yetkiniz yok" description="Bu yetkiyi sistem yöneticiniz düzenleyebilir."/>;
   else if (path === '/admin') page = has('users.view') ? <Admin currentUser={user} refreshSession={refreshSession}/> : <Empty title="Kullanıcı görüntüleme izniniz yok"/>;
   else if (path === '/roles') page = has('users.view') ? <Admin currentUser={user} refreshSession={refreshSession}/> : <Empty title="Kullanıcı yönetimi yetkiniz yok"/>;
-  else if (['/definitions/types', '/definitions/categories', '/definitions/titles', '/definitions/titleGroups', '/definitions/personnelGroups', '/definitions/departments'].includes(path)) page = has('definitions.' + path.split('/')[2] + '.view') ? <Definitions key={path} kind={path.split('/')[2] as DefinitionKind} user={user} refreshSession={refreshSession}/> : <Empty title="Tanım görüntüleme izniniz yok"/>;
+  else if (['/definitions/types', '/definitions/categories', '/definitions/titles', '/definitions/titleGroups', '/definitions/personnelGroups', '/definitions/departments', '/definitions/workUnits', '/definitions/dutyLocations'].includes(path)) page = has('definitions.' + path.split('/')[2] + '.view') ? <Definitions key={path} kind={path.split('/')[2] as DefinitionKind} user={user} refreshSession={refreshSession}/> : <Empty title="Tanım görüntüleme izniniz yok"/>;
   else if (path.startsWith('/requests/')) page = canViewRequests ? <Detail key={path} id={path.slice(10)} service={service} created={new URLSearchParams(query).has('created')} userId={user.id}/> : <Empty title="Talep görüntüleme izniniz yok"/>;
   else page = <Empty title="Sayfa bulunamadı"><a className="button primary" href="#/">Dashboard'a dön</a></Empty>;
   return <><a className="skip-link" href="#main-content">İçeriğe geç</a><aside className={`sidebar ${mobileMenu ? 'is-open' : ''}`}>
@@ -65,13 +77,13 @@ export default function App({ service, user, logout, refreshSession }: { service
     <div className="workspace-label">YÖNETİM PANELİ</div><nav aria-label="Ana gezinme"><a className={`nav-link ${path === '/' ? 'active' : ''}`} href="#/"><Icon name="home"/>Dashboard</a>
     {canViewRequests && <><div className="nav-group"><Icon name="file"/><span>Talepler</span></div><div className="nav-children">{navItems.map(([url, label, active]) => <a key={url} href={`#${url}`} className={path === '/requests' && active ? 'active' : ''}><span className="nav-dot"/>{label}</a>)}</div></>}
     {has('users.view') && <><div className="nav-group"><Icon name="users"/><span>Kullanıcı Yönetimi</span></div><div className="nav-children"><a href="#/admin" className={path === '/admin' || path === '/roles' ? 'active' : ''}><span className="nav-dot"/>Kullanıcılar</a></div></>}
-    {definitionKinds.length > 0 && <><div className="nav-group"><Icon name="building"/><span>Sistem Tanımları</span></div><div className="nav-children">{definitionKinds.map(kind => <a key={kind} href={`#/definitions/${kind}`} className={path === `/definitions/${kind}` ? 'active' : ''}><span className="nav-dot"/>{({ types: 'Talep Türleri', categories: 'Kategoriler', titles: 'Ünvanlar', personnelGroups: 'Personel Grupları', titleGroups: 'Ünvan Grupları', departments: 'Birimler' })[kind]}</a>)}</div></>}</nav>
+    {definitionKinds.length > 0 && <><div className="nav-group"><Icon name="building"/><span>Sistem Tanımları</span></div><div className="nav-children">{definitionKinds.map(kind => <a key={kind} href={`#/definitions/${kind}`} className={path === `/definitions/${kind}` ? 'active' : ''}><span className="nav-dot"/>{({ types: 'Talep Türleri', categories: 'Kategoriler', titles: 'Ünvanlar', personnelGroups: 'Personel Grupları', titleGroups: 'Ünvan Grupları', departments: 'Müftülükler', workUnits: 'Çalışma Birimleri', dutyLocations: 'Görev Yerleri' })[kind]}</a>)}</div></>}</nav>
     <div className="sidebar-bottom">{user.canCreateRequests && <div className="sidebar-create"><strong>Yeni bir talep iletin.</strong><a className="button primary" href="#/new"><Icon name="plus" size={17}/>Yeni Talep Oluştur</a></div>}<div className="sidebar-footer"><span className="online-dot"/>Kurum360 <span>v1.0</span></div></div>
     </aside>{mobileMenu && <button className="sidebar-overlay" aria-label="Menüyü kapat" onClick={() => setMobileMenu(false)}/>}
     <div className="app-shell"><header className="topbar"><button className="icon-button menu-toggle" aria-label="Menüyü aç" aria-expanded={mobileMenu} onClick={() => setMobileMenu(!mobileMenu)}><Icon name="menu"/></button>
     <form className="global-search" onSubmit={e => { e.preventDefault(); navigate(`/requests?search=${encodeURIComponent(search)}`); }}><Icon name="search" size={19}/><input aria-label="Tüm taleplerde ara" placeholder="Talep no, konu veya açıklama…" value={search} onChange={e => setSearch(e.target.value)}/><button type="submit" aria-label="Ara"><Icon name="arrow" size={16}/></button></form>
-    <div className="topbar-actions"><button className="icon-button" aria-label="Bildirim bilgisi" onClick={() => setPopup('notifications')}><Icon name="bell"/></button><button className="user-menu" onClick={() => setPopup('user')} aria-label="Kullanıcı bilgisi"><span className="avatar">{initials}</span><span><strong>{user.name}</strong><small>{user.role}</small></span></button></div></header>
+    <div className="topbar-actions"><button className="icon-button" aria-label="Bildirim bilgisi" onClick={() => setPopup('notifications')}><Icon name="bell"/>{notifications.unread > 0 && <span>{notifications.unread}</span>}</button><button className="user-menu" onClick={() => setPopup('user')} aria-label="Kullanıcı bilgisi"><span className="avatar">{initials}</span><span><strong>{user.name}</strong><small>{user.role}</small></span></button></div></header>
     <main id="main-content" tabIndex={-1}>{page}<footer className="app-footer"><span>Kurum360 · Talep ve İş Takip Sistemi</span></footer></main></div>
-    {popup && <Modal title={popup === 'user' ? 'Kullanıcı Bilgisi' : 'Bildirimler'} onClose={() => setPopup('')}>{popup === 'user' ? <><h3>{user.name}</h3><p>{user.role} · {user.title}</p><p>Talep oluşturma: {user.canCreateRequests ? 'Yetkili' : 'Yetkisiz'}</p><button onClick={() => void logout()}>Çıkış yap</button></> : <p>Bildirim gönderimi bu sürümde bulunmuyor. Onay bekleyen talepleri dashboard üzerinden takip edebilirsiniz.</p>}</Modal>}
+    {popup && <Modal title={popup === 'user' ? 'Kullanıcı Bilgisi' : 'Bildirimler'} onClose={() => setPopup('')}>{popup === 'user' ? <><h3>{user.name}</h3><p>{user.role} · {user.title}</p><p>{departments.find(d => d.id === user.departmentId)?.name}</p><p>{[workUnits.find(w => w.id === user.workUnitId)?.name, dutyLocations.find(w => w.id === user.dutyLocationId)?.name].filter(Boolean).join(' · ')}</p><p>Personel grupları: {personnelGroups.filter(g => groupIds(user).includes(g.id)).map(g => g.name).join(', ') || 'Seçilmedi'}</p><p>Talep oluşturma: {user.canCreateRequests ? 'Yetkili' : 'Yetkisiz'}</p><button onClick={() => void logout()}>Çıkış yap</button></> : <>{notificationError && <p className="error-banner">{notificationError}</p>}<p>Erişebildiğiniz taleplerin son hareketleri.</p>{notifications.unread > 0 && <button onClick={() => { void api('/notifications/read', 'POST').then(() => setNotifications(n => ({...n, unread: 0, items: n.items.map(i => ({...i, isUnread: false}))}))).catch(e => setNotificationError(errorMessage(e))); }}>Tümünü okundu işaretle</button>}{notifications.items.length ? <ul>{notifications.items.map(n => <li key={n.id}><a href={`#/requests/${n.requestId}`} onClick={() => setPopup('')}>{n.isUnread && '● '}{n.number} · {n.subject}</a><p>{n.text}</p><small>{dateTime(n.date)}</small></li>)}</ul> : <p>Henüz bildirim yok.</p>}</>}</Modal>}
   </>;
 }

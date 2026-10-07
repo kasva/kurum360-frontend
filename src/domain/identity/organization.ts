@@ -1,8 +1,11 @@
 export type UserRole = string;
-export interface User { id: string; name: string; title: string; role: UserRole; titleId?: string; departmentId?: string; titleGroupId?: string; personnelGroupId?: string; isOperator?: boolean; canCreateRequests?: boolean; mustChangePassword?: boolean; roleCode?: string; permissions?: string[] }
-export interface OrganizationDefinition { id: string; name: string; isActive: boolean; parentId?: string; titleGroupId?: string }
+export interface User { id: string; name: string; title: string; role: UserRole; titleId?: string; departmentId?: string; titleGroupId?: string; personnelGroupId?: string; personnelGroupIds?: string[]; workUnitId?: string; dutyLocationId?: string; isInstitutionManager?: boolean; canViewProvince?: boolean; isOperator?: boolean; canCreateRequests?: boolean; mustChangePassword?: boolean; roleCode?: string; permissions?: string[] }
+export interface OrganizationDefinition { id: string; name: string; isActive: boolean; parentId?: string; departmentId?: string; acceptsExternalRequests?: boolean; titleGroupId?: string }
 export const departments: OrganizationDefinition[] = [];
 export const personnelGroups: OrganizationDefinition[] = [];
+export const workUnits: OrganizationDefinition[] = [];
+export const dutyLocations: OrganizationDefinition[] = [];
+export const groupIds = (user: Pick<User, "personnelGroupIds" | "personnelGroupId">) => user.personnelGroupIds ?? (user.personnelGroupId ? [user.personnelGroupId] : []);
 export const titleGroups: OrganizationDefinition[] = [];
 export const titleCatalog: OrganizationDefinition[] = [];
 export const titles = ['VHKİ', 'Şef', 'İmam-Hatip', 'Vaiz', 'Memur', 'Kur’an Kursu Öğreticisi'];
