@@ -20,8 +20,8 @@ export default function UserImport({ onClose, onImported }: { onClose: () => voi
     } finally { setBusy(false); }
   }
   return <Modal wide title="Excel’den Toplu Kullanıcı Oluştur" onClose={() => { if (!busy) onClose(); }}>
-    <p>Önce Sistem Tanımları ekranında ünvanları tanımlayın; şablonu indirip <strong>Kullanıcılar</strong> sayfasını doldurun. Ad, soyad, e-posta, birim ve ünvan zorunludur. Telefon isteğe bağlıdır.</p>
-    <p>Ünvan adını <strong>Ünvanlar</strong> sayfasından alın. Telefonu başındaki sıfırı koruyarak metin olarak yazın. Talep Açabilir: <strong>Evet / Hayır</strong>; boş bırakılırsa Hayır.</p>
+    <p>Önce Sistem Tanımları ekranında ünvanları tanımlayın; şablonu indirip <strong>Kullanıcılar</strong> sayfasını doldurun. Ad, soyad, e-posta, birim ve ünvan zorunludur. Telefon ve personel grubu isteğe bağlıdır. Havuzdan iş alacak kullanıcılar için personel grubunu doldurun.</p>
+    <p>Ünvan adını <strong>Ünvanlar</strong>, grup adını <strong>Personel Grupları</strong> sayfasından alın. Telefonu başındaki sıfırı koruyarak metin olarak yazın. Talep Açabilir: <strong>Evet / Hayır</strong>; boş bırakılırsa Hayır.</p>
     <a className="button" href="/api/v1/admin/users/import-template">Excel Şablonunu İndir</a>
     <p className="notice">En fazla 100 kullanıcı / 2 MB. Yalnızca .xlsx kabul edilir. Tüm hesaplar Standart Kullanıcı ve aktif olarak oluşturulur. Mevcut hesaplar güncellenmez. Hatalı satır varsa hiçbir kullanıcı kaydedilmez.</p>
     {!result?.committed && <>
@@ -36,8 +36,8 @@ export default function UserImport({ onClose, onImported }: { onClose: () => voi
     {error && <div className="error-banner" role="alert">{error}</div>}
     {result && <>
       <p role="status">{result.committed ? `${result.created} kullanıcı oluşturuldu.` : `${result.total} kullanıcı satırı bulundu; ${invalid} satır hatalı.`}</p>
-      <div className="table-scroll import-preview"><table><thead><tr><th>Satır</th><th>Ad Soyad</th><th>E-posta / Telefon</th><th>Birim / Ünvan</th><th>Talep Açabilir</th><th>Sonuç</th></tr></thead><tbody>{result.rows.map(row => <tr key={row.rowNumber}>
-        <td>{row.rowNumber}</td><td>{row.firstName} {row.lastName}</td><td>{row.email}<div>{row.phoneNumber}</div></td><td>{row.department}<div>{row.title}</div></td><td>{row.canCreateRequests ? 'Evet' : 'Hayır'}</td>
+      <div className="table-scroll import-preview"><table><thead><tr><th>Satır</th><th>Ad Soyad</th><th>E-posta / Telefon</th><th>Birim / Ünvan</th><th>Personel Grubu</th><th>Talep Açabilir</th><th>Sonuç</th></tr></thead><tbody>{result.rows.map(row => <tr key={row.rowNumber}>
+        <td>{row.rowNumber}</td><td>{row.firstName} {row.lastName}</td><td>{row.email}<div>{row.phoneNumber}</div></td><td>{row.department}<div>{row.title}</div></td><td>{row.personnelGroup || 'Grup seçilmedi'}</td><td>{row.canCreateRequests ? 'Evet' : 'Hayır'}</td>
         <td>{row.errors.length ? row.errors.map((message, i) => <div key={i} className="import-error">{message}</div>) : result.committed ? 'Oluşturuldu' : 'Hazır'}</td>
       </tr>)}</tbody></table></div>
       {invalid > 0 && <p className="notice">Excel dosyasındaki belirtilen satırları düzeltip dosyayı yeniden seçin ve önizleyin.</p>}

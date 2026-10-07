@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { User } from '../../domain/identity/organization';
-import { hasPermission, departments, titleGroups } from '../../domain/identity/organization';
+import { hasPermission, departments, personnelGroups } from '../../domain/identity/organization';
 import UserImport from './UserImport';
 import { adminService } from '../../infrastructure/adminService';
 import type { AdminTitle, AdminUser, UserInput } from '../../infrastructure/adminService';
@@ -22,7 +22,7 @@ function UserEditor({ user, currentUserId, titles, allowedDepartments, onClose, 
 }) {
   const [input, setInput] = useState<UserInput>({ email: user?.email ?? '', name: user?.name ?? '',
     firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', title: user?.title ?? '', titleId: user?.titleId ?? '', phoneNumber: user?.phoneNumber ?? '', userType: user?.userType ?? 'Standard',
-    departmentId: user?.departmentId ?? '', isOperator: user?.isOperator ?? false, role: user?.role ?? 'Employee',
+    personnelGroupId: user?.personnelGroupId ?? '', departmentId: user?.departmentId ?? '', isOperator: user?.isOperator ?? false, role: user?.role ?? 'Employee',
     canCreateRequests: user?.canCreateRequests ?? false, isActive: user?.isActive ?? true, temporaryPassword: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -31,7 +31,7 @@ function UserEditor({ user, currentUserId, titles, allowedDepartments, onClose, 
     e.preventDefault(); setBusy(true); setError('');
     try {
       const { temporaryPassword, ...details } = input;
-      const payload: UserInput = { ...details, name: `${details.firstName.trim()} ${details.lastName.trim()}`,
+      const payload: UserInput = { ...details, personnelGroupId: details.personnelGroupId || undefined, name: `${details.firstName.trim()} ${details.lastName.trim()}`,
         role: details.userType === 'Admin' ? 'SystemAdmin' : 'Employee', canCreateRequests: details.userType === 'Admin' || details.canCreateRequests };
       await onSave(user ? payload : { ...payload, temporaryPassword });
       onClose();
@@ -44,7 +44,7 @@ function UserEditor({ user, currentUserId, titles, allowedDepartments, onClose, 
     <Field label="Birim" required><Select required disabled={self} options={departments.filter(d => allowedDepartments.includes(d.id) && (d.isActive || d.id === input.departmentId)).map(d => ({value: d.id, label: d.name + (d.isActive ? '' : ' (Pasif)')}))} value={input.departmentId} onChange={e => setInput({...input, departmentId: e.target.value})} placeholder="Birim seçiniz"/></Field>
     <label className="admin-checkbox"><input type="checkbox" checked={input.isOperator} onChange={e => setInput({...input, isOperator: e.target.checked})}/>Birim operatörü</label>
     <Field label="Ünvan" required><Select required placeholder="Ünvan seçiniz" options={titles.filter(t => t.isActive || t.id === input.titleId).map(t => ({ value: t.id, label: t.name + (t.isActive ? '' : ' (Pasif)') }))} value={input.titleId} onChange={e => setInput({ ...input, titleId: e.target.value, title: titles.find(t => t.id === e.target.value)?.name ?? '' })}/><small>Ünvanları Sistem Tanımları → Ünvanlar ekranından tanımlayın.</small></Field>
-    <p className="muted">Ünvan grubu: {titleGroups.find(g => g.id === titles.find(t => t.id === input.titleId)?.titleGroupId)?.name ?? 'Ünvan seçiniz'}</p>
+    <Field label="Personel Grubu"><Select placeholder="Personel grubu seçiniz" options={personnelGroups.filter(g => g.isActive || g.id === input.personnelGroupId).map(g => ({value: g.id, label: g.name + (g.isActive ? '' : ' (Pasif)')}))} value={input.personnelGroupId ?? ''} onChange={e => setInput({...input, personnelGroupId: e.target.value})}/><small>Ünvandan bağımsızdır. Kullanıcı bu grubun birimindeki atanmamış talepleri havuzdan üzerine alabilir.</small></Field>
     <Field label="Telefon"><input type="tel" autoComplete="tel" maxLength={30} value={input.phoneNumber} placeholder="05xx xxx xx xx" onChange={e => setInput({ ...input, phoneNumber: e.target.value })}/></Field>
     <Field label="E-posta" required><input type="email" required maxLength={254} value={input.email} onChange={e => setInput({ ...input, email: e.target.value })}/></Field>
     <Field label="Kullanıcı Tipi" required><Select placeholder={null} options={[{ value: 'Standard', label: 'Standart Kullanıcı' }, { value: 'Admin', label: 'Admin' }]} disabled={self} value={input.userType} onChange={e => setInput({ ...input, userType: e.target.value as UserInput['userType'] })}/></Field>
@@ -84,16 +84,16 @@ export default function Admin({ currentUser, refreshSession }: { currentUser: Us
   }, [reload, manage, currentUser]);
   async function saved(text: string) { setMessage(text); setError(''); setReload(v => v + 1); await refreshSession(); }
   const query = search.trim().toLocaleLowerCase('tr-TR');
-  const filtered = users.filter(u => `${u.name} ${u.email} ${u.title} ${u.phoneNumber ?? ''}`.toLocaleLowerCase('tr-TR').includes(query));
+  const filtered = users.filter(u => `${u.name} ${u.email} ${u.title} ${personnelGroups.find(g => g.id === u.personnelGroupId)?.name ?? ''} ${u.phoneNumber ?? ''}`.toLocaleLowerCase('tr-TR').includes(query));
   const editable = (u: AdminUser) => currentUser.roleCode === 'SystemAdmin' || u.userType === 'Standard';
   return <>
     <PageTitle title="Kullanıcı Yönetimi" description="Personel bilgilerini, kullanıcı tipini ve talep açma iznini yönetin.">{manage && <div className="admin-actions"><button disabled={loading} onClick={() => setEditor({ kind: 'import' })}>Excel’den Toplu Yükle</button><button className="primary" disabled={loading} onClick={() => setEditor({ kind: 'user' })}><Icon name="plus" size={17}/>Yeni Kullanıcı</button></div>}</PageTitle>
-    <div className="admin-tabs">{hasPermission(currentUser, 'definitions.titles.view') && <a className="button" href="#/definitions/titles">Ünvan Tanımları</a>}<button onClick={() => { setError(''); setLoading(true); setReload(v => v + 1); }}>Yenile</button></div>
+    <div className="admin-tabs">{hasPermission(currentUser, 'definitions.personnelGroups.view') && <a className="button" href="#/definitions/personnelGroups">Personel Grubu Tanımları</a>}{hasPermission(currentUser, 'definitions.titles.view') && <a className="button" href="#/definitions/titles">Ünvan Tanımları</a>}<button onClick={() => { setError(''); setLoading(true); setReload(v => v + 1); }}>Yenile</button></div>
     {message && <div className="success-banner" role="status">{message}</div>}{error && <div className="error-banner" role="alert">{error}</div>}
-    {loading ? <p className="loading">Kullanıcılar yükleniyor…</p> : <section className="card"><div className="padded"><Field label="Kullanıcı Ara"><input placeholder="Ad, soyad, e-posta, ünvan, telefon…" value={search} onChange={e => setSearch(e.target.value)}/></Field></div>
-    {filtered.length ? <div className="table-scroll"><table><thead><tr><th>Kullanıcı</th><th>Ünvan / Telefon</th><th>Kullanıcı Tipi</th><th>Hesap</th><th>Talep Oluşturma</th><th>İşlemler</th></tr></thead><tbody>{filtered.map(user => <tr key={user.id}>
+    {loading ? <p className="loading">Kullanıcılar yükleniyor…</p> : <section className="card"><div className="padded"><Field label="Kullanıcı Ara"><input placeholder="Ad, soyad, e-posta, ünvan, personel grubu, telefon…" value={search} onChange={e => setSearch(e.target.value)}/></Field></div>
+    {filtered.length ? <div className="table-scroll"><table><thead><tr><th>Kullanıcı</th><th>Ünvan / Telefon</th><th>Personel Grubu</th><th>Kullanıcı Tipi</th><th>Hesap</th><th>Talep Oluşturma</th><th>İşlemler</th></tr></thead><tbody>{filtered.map(user => <tr key={user.id}>
       <td><strong>{user.name}</strong><div>{user.email}</div>{user.mustChangePassword && <small className="muted">Parola değişimi bekleniyor</small>}</td>
-      <td>{departments.find(d => d.id === user.departmentId)?.name ?? 'Birim eşleştirmesi bekliyor'}{user.isOperator && ' · Operatör'}<div>{user.title || '—'}</div><div>{user.phoneNumber || '—'}</div></td><td>{user.userType === 'Admin' ? 'Admin' : 'Standart Kullanıcı'}</td><td>{user.isActive ? 'Aktif' : 'Pasif'}</td><td>{user.canCreateRequests ? 'Yetkili' : 'Yetkisiz'}</td>
+      <td>{departments.find(d => d.id === user.departmentId)?.name ?? 'Birim eşleştirmesi bekliyor'}{user.isOperator && ' · Operatör'}<div>{user.title || '—'}</div><div>{user.phoneNumber || '—'}</div></td><td>{personnelGroups.find(g => g.id === user.personnelGroupId)?.name ?? 'Grup seçilmedi'}</td><td>{user.userType === 'Admin' ? 'Admin' : 'Standart Kullanıcı'}</td><td>{user.isActive ? 'Aktif' : 'Pasif'}</td><td>{user.canCreateRequests ? 'Yetkili' : 'Yetkisiz'}</td>
       <td><div className="admin-actions">{manage && editable(user) && <button onClick={() => setEditor({ kind: 'user', user })}>Düzenle</button>}{hasPermission(currentUser, 'users.password') && editable(user) && <button onClick={() => setEditor({ kind: 'password', user })}>Geçici Parola Ver</button>}</div></td>
     </tr>)}</tbody></table></div> : <Empty title="Kullanıcı bulunamadı" description="Aramayı değiştirin veya yeni bir kullanıcı oluşturun."/>}</section>}
     {editor?.kind === 'user' && <UserEditor user={editor.user} currentUserId={currentUser.id} titles={titles} allowedDepartments={departments.filter(d => departments.some(root => root.id === currentUser.departmentId && !root.parentId && root.isActive) || d.id === currentUser.departmentId).map(d => d.id)} onClose={() => setEditor(null)} onSave={async input => {

@@ -8,7 +8,7 @@ export interface RequestFilters {
   status?: string;
   priority?: string;
   targetTitle?: string;
-  targetDepartmentId?: string; targetTitleGroupId?: string;
+  targetDepartmentId?: string; targetPersonnelGroupId?: string;
   assignee?: string;
   requester?: string;
   from?: string;

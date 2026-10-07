@@ -1,5 +1,5 @@
 import type { User, UserRole } from '../domain/identity/organization';
-import { titles, people, departments, titleGroups, titleCatalog } from '../domain/identity/organization';
+import { titles, people, departments, titleGroups, personnelGroups, titleCatalog } from '../domain/identity/organization';
 import { categories, categoryDefinitions, priorities, privacyLevels, statuses, typeDefinitions } from '../domain/requests/model';
 import type { RequestRecord, RequestDraft } from '../domain/requests/types';
 import type { RequestService, RequestFilters, RequestAction } from '../application/requests/types';
@@ -22,7 +22,7 @@ const privacyCodes = ['Normal', 'Confidential', 'TopSecret'];
 const statusCodes = ['New', 'Evaluating', 'Assigned', 'InProgress', 'OnHold', 'AwaitingApproval', 'Completed', 'Closed', 'Rejected', 'Cancelled'];
 const roleCodes = ['SystemAdmin', 'GeneralManager', 'DeputyGeneralManager', 'DepartmentManager', 'Employee', 'Viewer'];
 const roleNames: UserRole[] = ['Sistem yöneticisi', 'Genel Müdür', 'Genel Müdür Yardımcısı', 'Ünvan yöneticisi', 'Çalışan', 'İzleyici / raporlama kullanıcısı'];
-interface WireUser { id: string; name: string; title: string; titleId: string; departmentId?: string; titleGroupId?: string; isOperator?: boolean; role: string; canCreateRequests?: boolean; mustChangePassword?: boolean; roleCode?: string; roleName?: string; permissions?: string[] }
+interface WireUser { id: string; name: string; title: string; titleId: string; departmentId?: string; titleGroupId?: string; personnelGroupId?: string; isOperator?: boolean; role: string; canCreateRequests?: boolean; mustChangePassword?: boolean; roleCode?: string; roleName?: string; permissions?: string[] }
 interface WireRecord extends Omit<RequestRecord, 'type' | 'category' | 'priority' | 'privacy' | 'status' | 'tags' | 'dynamic'> {
   allowedStatuses?: string[]; type: string; category: string; priority: string; privacy: string; status: string; tags: string[]; targetTitleId: string; dynamic: Record<string, string>;
 }
@@ -75,8 +75,8 @@ export const auth = {
     await api('/auth/change-password', 'POST', { currentPassword, newPassword }); csrf = '';
   },
   async directory() {
-    const [titleDefinitions, users, metadata, units, groups] = await Promise.all([api<{ id: string; name: string; isActive: boolean; titleGroupId: string }[]>('/titles'), api<WireUser[]>('/users'), api<DefinitionMetadata>('/metadata'), api<typeof departments>('/departments'), api<typeof titleGroups>('/title-groups')]);
-    departments.splice(0, departments.length, ...units); titleGroups.splice(0, titleGroups.length, ...groups); titleCatalog.splice(0, titleCatalog.length, ...titleDefinitions);
+    const [titleDefinitions, users, metadata, units, groups, staffGroups] = await Promise.all([api<{ id: string; name: string; isActive: boolean; titleGroupId: string }[]>('/titles'), api<WireUser[]>('/users'), api<DefinitionMetadata>('/metadata'), api<typeof departments>('/departments'), api<typeof titleGroups>('/title-groups'), api<typeof personnelGroups>('/personnel-groups')]);
+    personnelGroups.splice(0, personnelGroups.length, ...staffGroups); departments.splice(0, departments.length, ...units); titleGroups.splice(0, titleGroups.length, ...groups); titleCatalog.splice(0, titleCatalog.length, ...titleDefinitions);
     titleIds.clear(); titleDefinitions.forEach(d => titleIds.set(d.name, d.id));
     titles.splice(0, titles.length, ...titleDefinitions.filter(d => d.isActive).map(d => d.name));
     people.splice(0, people.length, ...users.map(mapUser));
@@ -124,8 +124,8 @@ export function createHttpRequestService(): LiveRequestService {
         category: categoryCodes.includes(categoryCode(draft.category)) ? categoryCode(draft.category) : 'CorporateProcess',
         typeCode: typeCode(draft.type), categoryCode: categoryCode(draft.category),
         priority: code(priorities, priorityCodes, draft.priority), privacy: code(privacyLevels, privacyCodes, draft.privacy),
-        targetTitleId: draft.targetTitleGroupId ? null : titleIds.get(draft.targetTitle), targetDepartmentId: draft.targetDepartmentId || null,
-        targetTitleGroupId: draft.targetTitleGroupId || null, relatedPersonId: draft.relatedPerson || null, assigneeId: draft.assignee || null,
+        targetTitleId: draft.targetPersonnelGroupId ? null : titleIds.get(draft.targetTitle), targetDepartmentId: draft.targetDepartmentId || null,
+        targetPersonnelGroupId: draft.targetPersonnelGroupId || null, relatedPersonId: draft.relatedPerson || null, assigneeId: draft.assignee || null,
         tags: draft.tags.split(',').map(t => t.trim()).filter(Boolean),
         dynamic: Object.fromEntries((typeDefinitions.find(t => t.name === draft.type)?.fields ?? []).map(f => [f.key, draft.dynamic[f.key] ?? ''])), attachments: undefined,
       }));

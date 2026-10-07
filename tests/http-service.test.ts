@@ -18,7 +18,7 @@ test('HTTP service maps Turkish labels to stable codes, strips stale dynamic fie
     const response = path.endsWith('/auth/csrf') ? { token: 'csrf' }
       : path.endsWith('/titles') ? [{ id: 'unit-id', name: 'Test Ünvan', isActive: true }]
       : path.endsWith('/departments') ? [{id: 'department-id', name: 'İl Müftülüğü', isActive: true}]
-      : path.endsWith('/title-groups') ? [{id: 'group-id', name: 'İdari İşler', isActive: true}]
+      : (path.endsWith('/title-groups') || path.endsWith('/personnel-groups')) ? [{id: 'group-id', name: 'İdari İşler', isActive: true}]
       : path.endsWith('/users') ? []
       : path.includes('/requests?') ? { items: [wire], totalCount: 300, page: 2, pageSize: 20 }
       : path.endsWith('/actions') ? undefined : wire;
@@ -34,8 +34,8 @@ test('HTTP service maps Turkish labels to stable codes, strips stale dynamic fie
     await service.update('record-id', 'status', 'İşlemde');
     assert.deepEqual(calls.find(c => c.path.endsWith('/actions'))!.body, { action: 'status', value: 'InProgress', note: '', version: 7 });
     await service.create({ type: 'Talep', category: 'Yazılım', subject: 'Konu', description: 'Açıklama', priority: 'Normal', privacy: 'Normal',
-      targetDepartmentId: 'department-id', targetTitleGroupId: 'group-id', targetTitle: '', assignee: '', relatedPerson: '', dueDate: '2026-12-01', tags: 'Takip', dynamic: { incident: 'Önceki tür' }, attachments: [] });
+      targetDepartmentId: 'department-id', targetPersonnelGroupId: 'group-id', targetTitle: '', assignee: '', relatedPerson: '', dueDate: '2026-12-01', tags: 'Takip', dynamic: { incident: 'Önceki tür' }, attachments: [] });
     const created = calls.find(c => c.method === 'POST' && c.path.endsWith('/requests'))!.body!;
-    assert.equal(created.type, 'Request'); assert.equal(created.targetTitleId, null); assert.equal(created.targetDepartmentId, 'department-id'); assert.equal(created.targetTitleGroupId, 'group-id'); assert.deepEqual(created.dynamic, {});
+    assert.equal(created.type, 'Request'); assert.equal(created.targetTitleId, null); assert.equal(created.targetDepartmentId, 'department-id'); assert.equal(created.targetPersonnelGroupId, 'group-id'); assert.deepEqual(created.dynamic, {});
   } finally { globalThis.fetch = originalFetch; }
 });

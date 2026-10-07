@@ -43,7 +43,7 @@ export function validateDraft(draft: RequestDraft, now = new Date()) {
   if (!isOption(categories, draft.category)) errors.category = 'Geçerli bir kategori seçin.';
   if (!isOption(priorities, draft.priority)) errors.priority = 'Geçerli bir öncelik seçin.';
   if (!isOption(privacyLevels, draft.privacy)) errors.privacy = 'Geçerli bir gizlilik seviyesi seçin.';
-  if (!draft.targetTitle && !draft.targetTitleGroupId && !draft.targetDepartmentId) errors.targetTitle = 'Hedef ünvan grubu seçiniz.';
+  if (!draft.targetTitle && !draft.targetPersonnelGroupId && !draft.targetDepartmentId) errors.targetTitle = 'Hedef personel grubu seçiniz.';
   const definition = typeDefinitions.find(t => t.name === draft.type);
   if (!definition || definition.isActive === false) errors.type = 'Aktif bir talep türü seçin.';
   if (categoryDefinitions.length && !categoryDefinitions.some(c => c.name === draft.category && c.isActive)) errors.category = 'Aktif bir kategori seçin.';
