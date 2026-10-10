@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "tsx --test tests/*.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:agenda": "playwright test -c playwright.agenda.config.ts"
   },
   "dependencies": {
     "react": "^19.2.8",

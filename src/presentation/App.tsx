@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Dashboard from './pages/Dashboard';
+import Agenda, { TodayAgenda } from './pages/Agenda';
 import RequestList from './pages/RequestList';
 import RequestDetail from './pages/RequestDetail';
 import NewRequest from './pages/NewRequest';
@@ -36,7 +37,7 @@ function Home({ service, user }: { service: LiveRequestService; user: User }) {
   useEffect(() => { const controller = new AbortController(); service.dashboard(undefined, controller.signal).then(setData).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); }); return () => controller.abort(); }, [service, reload]);
   if (error) return <div className="error-banner" role="alert">{error}<button onClick={() => { setError(''); setReload(r => r + 1); }}>Yeniden dene</button></div>;
   if (!data) return <div className="loading">Dashboard yükleniyor…</div>;
-  return <Dashboard records={data.recent} user={user} serverData={data}/>;
+  return <><TodayAgenda/><Dashboard records={data.recent} user={user} serverData={data}/></>;
 }
 export default function App({ service, user, logout, refreshSession }: { service: LiveRequestService; user: User; logout: () => Promise<void>; refreshSession: () => Promise<void> }) {
   const [route, setRoute] = useState(window.location.hash.slice(1) || '/');
@@ -44,7 +45,7 @@ export default function App({ service, user, logout, refreshSession }: { service
   const definitionKinds = (['types', 'categories', 'titles', 'titleGroups', 'personnelGroups', 'departments', 'workUnits', 'dutyLocations'] as const).filter(kind => has('definitions.' + kind + '.view'));
   const canViewRequests = ['requests.view.own', 'requests.view.title', 'requests.view.department', 'requests.view.all'].some(has);
   const [search, setSearch] = useState('');
-  const [notifications, setNotifications] = useState<{unread: number; items: {id: string; requestId: string; number: string; subject: string; text: string; date: string; isUnread: boolean}[]}>({unread: 0, items: []});
+  const [notifications, setNotifications] = useState<{unread: number; items: {id: string; requestId?: string; agendaEventId?: string; number?: string; subject: string; text: string; date: string; isUnread: boolean}[]}>({unread: 0, items: []});
   const [notificationError, setNotificationError] = useState('');
   useEffect(() => {
     let active = true;
@@ -64,7 +65,8 @@ export default function App({ service, user, logout, refreshSession }: { service
   if (user.isOperator || user.isInstitutionManager) navItems.push(['/requests?view=routing', 'Yönlendirme Havuzu', view === 'routing']);
   const initials = user.name.split(' ').map(n => n[0]).join('').slice(0, 2);
   let page;
-  if (path === '/') page = canViewRequests ? <Home service={service} user={user}/> : <Empty title="Kurum360'a hoş geldiniz" description="Yetkili olduğunuz ekranları sol menüden açabilirsiniz."/>;
+  if (path === '/') page = canViewRequests ? <Home service={service} user={user}/> : <><TodayAgenda/><Empty title="Kurum360'a hoş geldiniz" description="Yetkili olduğunuz ekranları sol menüden açabilirsiniz."/></>;
+  else if (path === '/agenda') page = <Agenda user={user} query={query}/>;
   else if (path === '/requests') page = canViewRequests ? <RequestList key={route} service={service} user={user} query={query}/> : <Empty title="Talep görüntüleme izniniz yok"/>;
   else if (path === '/new') page = user.canCreateRequests ? <NewRequest service={service} user={user} refresh={async () => {}} navigate={navigate}/> : <Empty title="Talep oluşturma yetkiniz yok" description="Bu yetkiyi sistem yöneticiniz düzenleyebilir."/>;
   else if (path === '/admin') page = has('users.view') ? <Admin currentUser={user} refreshSession={refreshSession}/> : <Empty title="Kullanıcı görüntüleme izniniz yok"/>;
@@ -75,7 +77,7 @@ export default function App({ service, user, logout, refreshSession }: { service
   return <><a className="skip-link" href="#main-content">İçeriğe geç</a><aside className={`sidebar ${mobileMenu ? 'is-open' : ''}`}>
     <a href="#/" className="brand"><span className="brand-mark"><Icon name="building" size={34}/></span><span><strong>Kurum<span>360</span></strong><small>Talep ve İş Takip Sistemi</small></span></a>
     <div className="workspace-label">YÖNETİM PANELİ</div><nav aria-label="Ana gezinme"><a className={`nav-link ${path === '/' ? 'active' : ''}`} href="#/"><Icon name="home"/>Dashboard</a>
-    {canViewRequests && <><div className="nav-group"><Icon name="file"/><span>Talepler</span></div><div className="nav-children">{navItems.map(([url, label, active]) => <a key={url} href={`#${url}`} className={path === '/requests' && active ? 'active' : ''}><span className="nav-dot"/>{label}</a>)}</div></>}
+    <a className={`nav-link ${path === '/agenda' ? 'active' : ''}`} href="#/agenda"><Icon name="calendar"/>Ajandam</a>{canViewRequests && <><div className="nav-group"><Icon name="file"/><span>Talepler</span></div><div className="nav-children">{navItems.map(([url, label, active]) => <a key={url} href={`#${url}`} className={path === '/requests' && active ? 'active' : ''}><span className="nav-dot"/>{label}</a>)}</div></>}
     {has('users.view') && <><div className="nav-group"><Icon name="users"/><span>Kullanıcı Yönetimi</span></div><div className="nav-children"><a href="#/admin" className={path === '/admin' || path === '/roles' ? 'active' : ''}><span className="nav-dot"/>Kullanıcılar</a></div></>}
     {definitionKinds.length > 0 && <><div className="nav-group"><Icon name="building"/><span>Sistem Tanımları</span></div><div className="nav-children">{definitionKinds.map(kind => <a key={kind} href={`#/definitions/${kind}`} className={path === `/definitions/${kind}` ? 'active' : ''}><span className="nav-dot"/>{({ types: 'Talep Türleri', categories: 'Kategoriler', titles: 'Ünvanlar', personnelGroups: 'Personel Grupları', titleGroups: 'Ünvan Grupları', departments: 'Müftülükler', workUnits: 'Çalışma Birimleri', dutyLocations: 'Görev Yerleri' })[kind]}</a>)}</div></>}</nav>
     <div className="sidebar-bottom">{user.canCreateRequests && <div className="sidebar-create"><strong>Yeni bir talep iletin.</strong><a className="button primary" href="#/new"><Icon name="plus" size={17}/>Yeni Talep Oluştur</a></div>}<div className="sidebar-footer"><span className="online-dot"/>Kurum360 <span>v1.0</span></div></div>
@@ -84,6 +86,6 @@ export default function App({ service, user, logout, refreshSession }: { service
     <form className="global-search" onSubmit={e => { e.preventDefault(); navigate(`/requests?search=${encodeURIComponent(search)}`); }}><Icon name="search" size={19}/><input aria-label="Tüm taleplerde ara" placeholder="Talep no, konu veya açıklama…" value={search} onChange={e => setSearch(e.target.value)}/><button type="submit" aria-label="Ara"><Icon name="arrow" size={16}/></button></form>
     <div className="topbar-actions"><button className="icon-button" aria-label="Bildirim bilgisi" onClick={() => setPopup('notifications')}><Icon name="bell"/>{notifications.unread > 0 && <span>{notifications.unread}</span>}</button><button className="user-menu" onClick={() => setPopup('user')} aria-label="Kullanıcı bilgisi"><span className="avatar">{initials}</span><span><strong>{user.name}</strong><small>{user.role}</small></span></button></div></header>
     <main id="main-content" tabIndex={-1}>{page}<footer className="app-footer"><span>Kurum360 · Talep ve İş Takip Sistemi</span></footer></main></div>
-    {popup && <Modal title={popup === 'user' ? 'Kullanıcı Bilgisi' : 'Bildirimler'} onClose={() => setPopup('')}>{popup === 'user' ? <><h3>{user.name}</h3><p>{user.role} · {user.title}</p><p>{departments.find(d => d.id === user.departmentId)?.name}</p><p>{[workUnits.find(w => w.id === user.workUnitId)?.name, dutyLocations.find(w => w.id === user.dutyLocationId)?.name].filter(Boolean).join(' · ')}</p><p>Personel grupları: {personnelGroups.filter(g => groupIds(user).includes(g.id)).map(g => g.name).join(', ') || 'Seçilmedi'}</p><p>Talep oluşturma: {user.canCreateRequests ? 'Yetkili' : 'Yetkisiz'}</p><button onClick={() => void logout()}>Çıkış yap</button></> : <>{notificationError && <p className="error-banner">{notificationError}</p>}<p>Erişebildiğiniz taleplerin son hareketleri.</p>{notifications.unread > 0 && <button onClick={() => { void api('/notifications/read', 'POST').then(() => setNotifications(n => ({...n, unread: 0, items: n.items.map(i => ({...i, isUnread: false}))}))).catch(e => setNotificationError(errorMessage(e))); }}>Tümünü okundu işaretle</button>}{notifications.items.length ? <ul>{notifications.items.map(n => <li key={n.id}><a href={`#/requests/${n.requestId}`} onClick={() => setPopup('')}>{n.isUnread && '● '}{n.number} · {n.subject}</a><p>{n.text}</p><small>{dateTime(n.date)}</small></li>)}</ul> : <p>Henüz bildirim yok.</p>}</>}</Modal>}
+    {popup && <Modal title={popup === 'user' ? 'Kullanıcı Bilgisi' : 'Bildirimler'} onClose={() => setPopup('')}>{popup === 'user' ? <><h3>{user.name}</h3><p>{user.role} · {user.title}</p><p>{departments.find(d => d.id === user.departmentId)?.name}</p><p>{[workUnits.find(w => w.id === user.workUnitId)?.name, dutyLocations.find(w => w.id === user.dutyLocationId)?.name].filter(Boolean).join(' · ')}</p><p>Personel grupları: {personnelGroups.filter(g => groupIds(user).includes(g.id)).map(g => g.name).join(', ') || 'Seçilmedi'}</p><p>Talep oluşturma: {user.canCreateRequests ? 'Yetkili' : 'Yetkisiz'}</p><button onClick={() => void logout()}>Çıkış yap</button></> : <>{notificationError && <p className="error-banner">{notificationError}</p>}<p>Talep hareketleri ve ajanda bildirimleri.</p>{notifications.unread > 0 && <button onClick={() => { void api('/notifications/read', 'POST').then(() => setNotifications(n => ({...n, unread: 0, items: n.items.map(i => ({...i, isUnread: false}))}))).catch(e => setNotificationError(errorMessage(e))); }}>Tümünü okundu işaretle</button>}{notifications.items.length ? <ul>{notifications.items.map(n => <li key={n.id}><a href={n.agendaEventId ? `#/agenda?event=${n.agendaEventId}` : `#/requests/${n.requestId}`} onClick={() => setPopup('')}>{n.isUnread && '● '}{n.number ? `${n.number} · ` : ''}{n.subject}</a><p>{n.text}</p><small>{dateTime(n.date)}</small></li>)}</ul> : <p>Henüz bildirim yok.</p>}</>}</Modal>}
   </>;
 }
