@@ -1,4 +1,4 @@
-import { Children, cloneElement, isValidElement, useEffect, useRef } from 'react';
+import { Children, cloneElement, isValidElement, useEffect, useId, useRef } from 'react';
 import type { ReactNode, SelectHTMLAttributes, SVGProps } from 'react';
 import type { RequestTiming } from '../../domain/requests/types';
 export type SelectOption = string | { value: string; label: string };
@@ -8,6 +8,7 @@ import { delayDays, isOpen } from '../../domain/requests/model';
 export function Icon({ name = 'file', size = 20, ...props }: SVGProps<SVGSVGElement> & { name?: string; size?: number }) {
   const paths: Record<string, string> = {
     home: 'M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9',
+    'map-pin': 'M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Zm-5 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
     file: 'M14 2H5v20h14V7l-5-5Z M14 2v6h5M8 12h8M8 16h6',
     search: 'M21 21l-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
     bell: 'M18 8a6 6 0 0 0-12 0c0 8-3 8-3 10h18c0-2-3-2-3-10M10 22h4',
@@ -56,6 +57,7 @@ export function Empty({ title = 'Talep bulunamadı', description = 'Filtreleri d
 }
 export function Modal({ title, children, onClose, wide = false, screenClose = false }: ContentProps & { title: string; onClose: () => void; wide?: boolean; screenClose?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   useEffect(() => {
     const previous = document.activeElement;
     const dialog = ref.current;
@@ -63,8 +65,8 @@ export function Modal({ title, children, onClose, wide = false, screenClose = fa
     dialog.showModal();
     return () => { dialog.close(); if (previous instanceof HTMLElement) previous.focus(); };
   }, []);
-  return <dialog ref={ref} className={[wide ? 'modal-wide' : '', screenClose ? 'modal-screen' : ''].filter(Boolean).join(' ')} onCancel={event => { event.preventDefault(); if (!screenClose) onClose(); }} aria-labelledby="modal-title">
+  return <dialog ref={ref} className={[wide ? 'modal-wide' : '', screenClose ? 'modal-screen' : ''].filter(Boolean).join(' ')} onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!screenClose) onClose(); }} aria-labelledby={titleId}>
     {screenClose && <button type="button" className="modal-screen-close" aria-label="Pencereyi kapat" onClick={onClose}><Icon name="close" size={20}/>Kapat</button>}
-    <div className="modal-body"><header><h2 id="modal-title">{title}</h2>{!screenClose && <button type="button" className="icon-button" aria-label="Pencereyi kapat" onClick={onClose}><Icon name="close"/></button>}</header>{children}</div>
+    <div className="modal-body"><header><h2 id={titleId}>{title}</h2>{!screenClose && <button type="button" className="icon-button" aria-label="Pencereyi kapat" onClick={onClose}><Icon name="close"/></button>}</header>{children}</div>
   </dialog>;
 }

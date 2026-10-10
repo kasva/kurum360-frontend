@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import type { User } from '../../domain/identity/organization';
 import { RequestValidationError } from '../../application/requests/errors';
 import { agendaService, agendaToday, agendaMidnight, shiftDay, agendaDate, agendaTime, agendaLocal } from '../../infrastructure/agendaService';
-import type { AgendaEvent, AgendaInput, AgendaDirectory } from '../../infrastructure/agendaService';
-import { Empty, Field, Modal, PageTitle } from '../components/ui';
+import type { AgendaEvent, AgendaInput, AgendaDirectory, AgendaVenue } from '../../infrastructure/agendaService';
+import { Empty, Field, Icon, Modal, PageTitle } from '../components/ui';
 import { errorMessage } from '../errors';
+import AgendaDateTimePicker from '../components/AgendaDateTimePicker';
 
 type View = 'day' | 'week' | 'month';
 function range(day: string, view: View) {
@@ -15,16 +16,27 @@ function range(day: string, view: View) {
 }
 const overlaps = (a: AgendaEvent, start: string, end: string) => !a.isCancelled && new Date(a.startsAt) < new Date(end) && new Date(a.endsAt) > new Date(start);
 
+function VenueBadge({ venue }: { venue: AgendaVenue | null }) {
+  return <span className={`agenda-venue ${venue === 'External' ? 'external' : venue === 'Internal' ? 'internal' : 'unknown'}`}>
+    <Icon name={venue === 'Internal' ? 'home' : venue === 'External' ? 'map-pin' : 'info'} size={16}/>
+    {venue === 'Internal' ? 'Kurum içi' : venue === 'External' ? 'Kurum dışı' : 'Yer türü belirtilmedi'}
+  </span>;
+}
+
 function Editor({ event, shared, day, directory, onClose, onSaved }: { event?: AgendaEvent; shared: boolean; day: string; directory: AgendaDirectory; onClose: () => void; onSaved: () => void }) {
   const [draft, setDraft] = useState({ title: event?.title ?? '', description: event?.description ?? '', location: event?.location ?? '',
+    venue: (event ? event.venue ?? '' : 'Internal') as AgendaVenue | '',
     startsAt: event ? agendaLocal(event.startsAt) : `${day}T09:00`, endsAt: event ? agendaLocal(event.endsAt) : `${day}T10:00`,
     allDepartment: false, userIds: event?.userIds ?? [], groupIds: [] as string[] });
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const [conflicts, setConflicts] = useState<string[] | null>(null);
+  const [activePicker, setActivePicker] = useState<'start' | 'end' | null>(null);
   const change = <K extends keyof typeof draft,>(key: K, value: typeof draft[K]) => { setDraft(d => ({ ...d, [key]: value })); setConflicts(null); };
   const toggle = (key: 'userIds' | 'groupIds', id: string) => change(key, draft[key].includes(id) ? draft[key].filter(i => i !== id) : [...draft[key], id]);
   async function save() {
     setError('');
+    if (activePicker) { setError('Tarih ve saat seçimini Tamam düğmesiyle onaylayın.'); return; }
+    if (!draft.venue) { setError('Kurum içi veya kurum dışı seçin.'); return; }
     if (draft.endsAt <= draft.startsAt) { setError('Bitiş zamanı başlangıçtan sonra olmalıdır.'); return; }
     if (shared && !draft.allDepartment && !draft.userIds.length && !draft.groupIds.length) { setError('Katılımcı veya personel grubu seçin.'); return; }
     setBusy(true);
@@ -48,8 +60,9 @@ function Editor({ event, shared, day, directory, onClose, onSaved }: { event?: A
       {error && <p className="error-banner" role="alert">{error}</p>}
       <div className="form-grid">
         <Field label="Başlık" required className="full"><input required maxLength={160} value={draft.title} onChange={e => change('title', e.target.value)}/></Field>
-        <Field label="Başlangıç (Türkiye saati)" required><input type="datetime-local" required value={draft.startsAt} onChange={e => change('startsAt', e.target.value)}/></Field>
-        <Field label="Bitiş (Türkiye saati)" required><input type="datetime-local" required value={draft.endsAt} onChange={e => change('endsAt', e.target.value)}/></Field>
+        <Field label="Etkinlik yeri" required className="full"><select required value={draft.venue} onChange={e => change('venue', e.target.value as AgendaVenue | '')}><option value="" disabled>Yer türünü seçin</option><option value="Internal">Kurum içi</option><option value="External">Kurum dışı</option></select></Field>
+        <AgendaDateTimePicker label="Başlangıç (Türkiye saati)" value={draft.startsAt} onChange={value => change('startsAt', value)} open={activePicker === 'start'} onOpenChange={open => setActivePicker(open ? 'start' : null)}/>
+        <AgendaDateTimePicker label="Bitiş (Türkiye saati)" value={draft.endsAt} onChange={value => change('endsAt', value)} open={activePicker === 'end'} onOpenChange={open => setActivePicker(open ? 'end' : null)}/>
         <Field label="Yer / çevrim içi bağlantı" className="full"><input maxLength={500} value={draft.location} onChange={e => change('location', e.target.value)}/></Field>
         <Field label="Açıklama" className="full"><textarea rows={3} maxLength={2000} value={draft.description} onChange={e => change('description', e.target.value)}/></Field>
       </div>
@@ -60,7 +73,7 @@ function Editor({ event, shared, day, directory, onClose, onSaved }: { event?: A
         <small>Düzenleyici de katılımcıdır. Seçilen grupların mevcut aktif üyeleri eklenir; sonraki üyelik değişiklikleri bu toplantıyı değiştirmez.</small>
       </fieldset>}
       {!!conflicts?.length && <p className="notice" role="alert">Ajandanızda bu saatlerle çakışan programlar var: {conflicts.join(', ')}. Yine de kaydedebilirsiniz. Diğer katılımcıların müsaitliği bu uyarıya dahil değildir.</p>}
-      <div className="agenda-actions"><button type="button" className="button" disabled={busy} onClick={onClose}>Vazgeç</button><button className="button primary" disabled={busy}>{busy ? 'Kaydediliyor…' : conflicts?.length ? 'Çakışmaya rağmen kaydet' : 'Kaydet'}</button></div>
+      <div className="agenda-actions"><button type="button" className="button" disabled={busy} onClick={onClose}>Vazgeç</button><button className="button primary" disabled={busy || activePicker !== null}>{busy ? 'Kaydediliyor…' : conflicts?.length ? 'Çakışmaya rağmen kaydet' : 'Kaydet'}</button></div>
     </form>
   </Modal>;
 }
@@ -81,14 +94,14 @@ export default function Agenda({ user, query = '' }: { user: User; query?: strin
   const { first, count } = range(day, view); const last = shiftDay(first, count);
   useEffect(() => {
     const controller = new AbortController();
-    agendaService.list(agendaMidnight(first), agendaMidnight(last), controller.signal).then(setEvents).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    agendaService.list(agendaMidnight(first), agendaMidnight(last), controller.signal).then(items => setEvents(items.filter(e => !e.isCancelled))).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [first, last, reload]);
   const eventId = new URLSearchParams(query).get('event');
   useEffect(() => {
     if (!eventId) return;
     const controller = new AbortController();
-    agendaService.get(eventId, controller.signal).then(e => { setSelected(e); setDay(agendaLocal(e.startsAt).slice(0, 10)); }).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); });
+    agendaService.get(eventId, controller.signal).then(e => { if (e.isCancelled) { setSelected(undefined); setError('Bu program iptal edildi.'); return; } setSelected(e); setDay(agendaLocal(e.startsAt).slice(0, 10)); }).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); });
     return () => controller.abort();
   }, [eventId]);
   function refresh() { setEditor(undefined); setSelected(undefined); setError(''); setLoading(true); setReload(r => r + 1); }
@@ -116,13 +129,15 @@ export default function Agenda({ user, query = '' }: { user: User; query?: strin
       {Array.from({ length: count }, (_, index) => {
         const date = shiftDay(first, index); const items = events.filter(e => new Date(e.startsAt) < new Date(agendaMidnight(shiftDay(date, 1))) && new Date(e.endsAt) > new Date(agendaMidnight(date)));
         return <section key={date} className={`card agenda-day-card ${date === agendaToday() ? 'agenda-current' : ''}`}><h2>{agendaDate(date)}</h2>
-          {items.length ? items.map(e => <button key={e.id} className={`agenda-event ${e.isShared ? 'shared' : ''} ${e.isCancelled ? 'cancelled' : ''}`} onClick={() => setSelected(e)}>
+          {items.length ? items.map(e => <button key={e.id} className={`agenda-event ${e.isShared ? 'shared' : ''} venue-${e.venue?.toLowerCase() ?? 'unknown'}`} onClick={() => setSelected(e)}>
+            <VenueBadge venue={e.venue}/>
             <span>{agendaTime(e.startsAt)}–{agendaTime(e.endsAt)}{agendaLocal(e.startsAt).slice(0, 10) !== agendaLocal(e.endsAt).slice(0, 10) && ' · Birden fazla gün'}</span><strong>{e.title}</strong><small>{e.isCancelled ? 'İptal edildi' : e.isShared ? `Toplantı · ${e.participantCount} katılımcı` : 'Kişisel program'}</small>{e.location && <small>{e.location}</small>}
           </button>) : <p className="muted">Program yok.</p>}
         </section>;
       })}
     </div>}
     {selected && !editor && <Modal title={selected.title} onClose={() => setSelected(undefined)}>{error && <p className="error-banner" role="alert">{error}</p>}<p>{agendaDate(agendaLocal(selected.startsAt).slice(0, 10))} · {agendaTime(selected.startsAt)} – {agendaDate(agendaLocal(selected.endsAt).slice(0, 10))} · {agendaTime(selected.endsAt)}</p>
+      <VenueBadge venue={selected.venue}/>
       <p>{selected.isCancelled ? 'İptal edildi' : selected.isShared ? `Toplantı · ${selected.participantCount} katılımcı` : 'Kişisel program'}</p><p className="agenda-description">{selected.description}</p><p>{selected.location}</p>
       {selected.canEdit && <div className="agenda-actions"><button className="button primary" onClick={() => setEditor({ event: selected, shared: selected.isShared })}>Düzenle</button><button className="button" disabled={busy} onClick={() => { if (window.confirm('Bu program iptal edilsin mi? Katılımcılara bildirim gönderilecek.')) void cancel(); }}>{busy ? 'İptal ediliyor…' : 'Programı iptal et'}</button></div>}
     </Modal>}
@@ -136,5 +151,5 @@ export function TodayAgenda() {
     agendaService.list(agendaMidnight(day), agendaMidnight(shiftDay(day, 1)), controller.signal).then(data => setItems(data.filter(e => !e.isCancelled))).catch(e => { if (!controller.signal.aborted) setError(errorMessage(e)); });
     return () => controller.abort();
   }, []);
-  return <section className="card padded agenda-home"><div className="card-header"><h2>Bugünkü Programım</h2><a href="#/agenda">Ajandamı aç</a></div>{error ? <p className="error-banner">{error}</p> : !items ? <p>Program yükleniyor…</p> : items.length ? <div className="agenda-home-items">{items.map(e => <a className="agenda-event" key={e.id} href={`#/agenda?event=${e.id}`}><span>{agendaTime(e.startsAt)}–{agendaTime(e.endsAt)}</span><strong>{e.title}</strong><small>{e.location}</small></a>)}</div> : <Empty title="Bugün planlanmış programınız yok"/>}</section>;
+  return <section className="card padded agenda-home"><div className="card-header"><h2>Bugünkü Programım</h2><a href="#/agenda">Ajandamı aç</a></div>{error ? <p className="error-banner">{error}</p> : !items ? <p>Program yükleniyor…</p> : items.length ? <div className="agenda-home-items">{items.map(e => <a className={`agenda-event venue-${e.venue?.toLowerCase() ?? 'unknown'}`} key={e.id} href={`#/agenda?event=${e.id}`}><VenueBadge venue={e.venue}/><span>{agendaTime(e.startsAt)}–{agendaTime(e.endsAt)}</span><strong>{e.title}</strong><small>{e.location}</small></a>)}</div> : <Empty title="Bugün planlanmış programınız yok"/>}</section>;
 }

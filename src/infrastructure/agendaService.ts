@@ -1,13 +1,14 @@
 import { api } from './httpRequestService';
+export type AgendaVenue = 'Internal' | 'External';
 
 export interface AgendaEvent {
   id: string; title: string; description: string; location: string; startsAt: string; endsAt: string;
-  isShared: boolean; isCancelled: boolean; organizerId: string; version: number;
+  isShared: boolean; isCancelled: boolean; organizerId: string; version: number; venue: AgendaVenue | null;
   participantCount: number; userIds: string[]; canEdit: boolean;
 }
 export interface AgendaInput {
   title: string; description: string; location: string; startsAt: string; endsAt: string;
-  isShared: boolean; allDepartment: boolean; userIds: string[]; groupIds: string[]; version: number;
+  isShared: boolean; allDepartment: boolean; userIds: string[]; groupIds: string[]; version: number; venue: AgendaVenue | '';
 }
 export interface AgendaDirectory { users: { id: string; name: string }[]; groups: { id: string; name: string }[] }
 export const agendaService = {

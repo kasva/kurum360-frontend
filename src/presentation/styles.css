@@ -55,3 +55,33 @@ dialog.modal-screen .modal-body { width: min(540px, 100%); margin: 0 auto; backg
 .agenda-home-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 @media (max-width: 1100px) { .agenda-week, .agenda-month { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 650px) { .agenda-week, .agenda-month, .agenda-pickers { grid-template-columns: 1fr; } .agenda-toolbar { align-items: stretch; } }
+
+.agenda-date-trigger { width: 100%; justify-content: flex-start; gap: 12px; padding: 12px; background: #fff; border: 1px solid #dce5f6; text-align: left; }
+.agenda-date-trigger > span:first-of-type { flex: 1; font-size: 12px; font-weight: 400; }
+.agenda-date-trigger strong { display: block; font-size: 17px; margin-top: 4px; color: #23344d; }
+.agenda-date-edit { color: #2463eb; font-size: 12px; }
+.agenda-date-panel { padding: 14px; border: 1px solid #c9d9f5; border-radius: 12px; background: #f8faff; box-shadow: 0 8px 24px #18325a12; }
+.agenda-calendar-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.agenda-calendar-header button { min-width: 36px; min-height: 36px; }
+.agenda-calendar-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.agenda-calendar-days .agenda-weekday { text-align: center; font-size: 11px; padding: 6px 0; color: #71819b; }
+.agenda-calendar-days button { min-width: 0; min-height: 36px; padding: 5px; border: 1px solid transparent; background: #fff; justify-content: center; }
+.agenda-calendar-days button.other-month { color: #9ba8bd; background: transparent; }
+.agenda-calendar-days button[aria-current=date] { border-color: #8faeef; }
+.agenda-calendar-days button.chosen { background: #2463eb; color: #fff; border-color: #2463eb; }
+.agenda-calendar-time { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
+.agenda-calendar-time label { width: 66px; }
+.agenda-calendar-time select { padding: 8px; min-height: 38px; }
+.agenda-calendar-time small { margin-left: auto; font-size: 10px; color: #71819b; }
+.agenda-date-preview { font-size: 12px; padding: 12px 0; color: #526a8c; }
+.agenda-date-footer { display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e2e9f5; padding-top: 12px; }
+.agenda-date-footer button { min-width: 85px; }
+.agenda-date-panel .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.agenda-event.venue-internal { border-left-color: #16836c; background: #f1faf7; }
+.agenda-event.venue-external { border-left-color: #d47b16; background: #fff8ee; }
+.agenda-event .agenda-venue, .agenda-venue { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; border-radius: 6px; padding: 5px 8px; font-size: 12px; font-weight: 650; }
+.agenda-venue.internal { color: #136b58; background: #dff3ec; }
+.agenda-venue.external { color: #95520a; background: #ffecd3; }
+.agenda-venue.unknown { color: #68758a; background: #edf0f5; }
+.agenda-venue svg { flex-shrink: 0; }
